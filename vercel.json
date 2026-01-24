@@ -1,19 +1,18 @@
 {
   "version": 2,
-  "framework": "none",
   "functions": {
-    "dist/server.js": {
-      "runtime": "@vercel/node@1.15.2"
+    "src/server.ts": {
+      "runtime": "vercel/node"
     }
   },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/dist/server.js"
+      "destination": "src/server.ts"
     },
     {
       "source": "/(.*)",
-      "destination": "/dist/server.js"
+      "destination": "/index.html"
     }
   ]
 }
