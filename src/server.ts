@@ -116,8 +116,13 @@ const broadcastToClients = (data: any) => {
 // 导出广播函数以便在其他地方使用
 export { broadcastToClients };
 
-server.listen(PORT, () => {
-  console.log(`Server on http://localhost:${PORT}`);
-});
+// 只有在非 Vercel 环境下才运行 listen
+if (!process.env.VERCEL_ENV) {
+  const port = process.env.PORT || 4000;
+  server.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+  });
+}
 
+// 必须导出 app 供 Vercel 调用
 export default app;

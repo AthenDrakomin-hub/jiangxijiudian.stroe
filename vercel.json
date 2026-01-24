@@ -1,25 +1,18 @@
 {
   "version": 2,
-  "name": "restaurant-ordering-system",
-  "builds": [
-    {
-      "src": "src/server.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "frontend/dist/**/*",
-      "use": "@vercel/static"
+  "functions": {
+    "src/server.ts": {
+      "runtime": "@vercel/node@1.15.2"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/src/server.ts"
+      "source": "/api/(.*)",
+      "destination": "/src/server.ts"
     },
     {
-      "src": "/(.*)",
-      "dest": "/frontend/dist/index.html",
-      "check": true
+      "source": "/(.*)",
+      "destination": "/frontend/dist/$1"
     }
   ]
 }
