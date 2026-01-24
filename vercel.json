@@ -1,20 +1,19 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/node",
-      "config": { "distDir": "dist" }
+  "framework": "none",
+  "functions": {
+    "dist/server.js": {
+      "runtime": "@vercel/node@1.15.2"
     }
-  ],
-  "routes": [
+  },
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "/dist/server.js"
+      "source": "/api/(.*)",
+      "destination": "/dist/server.js"
     },
     {
-      "src": "/(.*)",
-      "dest": "/dist/server.js"
+      "source": "/(.*)",
+      "destination": "/dist/server.js"
     }
   ]
 }
