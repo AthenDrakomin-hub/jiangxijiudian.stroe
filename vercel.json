@@ -1,18 +1,20 @@
 {
   "version": 2,
-  "functions": {
-    "src/server.ts": {
-      "runtime": "@vercel/node@1.15.2"
-    }
-  },
-  "rewrites": [
+  "builds": [
     {
-      "source": "/api/(.*)",
-      "destination": "/src/server.ts"
+      "src": "package.json",
+      "use": "@vercel/node",
+      "config": { "distDir": "dist" }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/dist/server.js"
     },
     {
-      "source": "/(.*)",
-      "destination": "/frontend/dist/$1"
+      "src": "/(.*)",
+      "dest": "/dist/server.js"
     }
   ]
 }

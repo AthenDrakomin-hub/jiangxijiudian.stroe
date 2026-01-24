@@ -68,11 +68,11 @@ app.use('/api/data', stubRoutes); // 为新模型提供基础路由
 
 // 托管前端静态文件
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/build')));
+  app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
   // 处理SPA路由，将所有非API请求重定向到index.html
   app.get('*', (req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
+    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
   });
 }
 
