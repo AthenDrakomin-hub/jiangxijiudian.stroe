@@ -215,6 +215,94 @@ npm start
 
 ## API 接口
 
+### 数据模型字段定义
+
+#### 1. 房间(Room) 模型
+```typescript
+interface Room {
+  roomNumber: string;     // 房号 (如: "8201", "8301", "3333", "6666", "9999")
+  tableName: string;      // 餐桌名称 (如: "餐桌8201", "VIP包厢A")
+  capacity: number;       // 容量 (人数: 2-20)
+  status: 'available' | 'occupied' | 'maintenance'; // 状态
+}
+```
+
+#### 2. 菜品(Dish) 模型
+```typescript
+interface Dish {
+  _id: string;           // 菜品ID
+  name: string;          // 菜品名称 (如: "宫保鸡丁")
+  description: string;   // 菜品描述 (如: "经典川菜，酸甜微辣")
+  price: number;         // 价格 (单位: 元)
+  category: string;      // 分类 (如: "川菜", "家常菜", "海鲜")
+  isAvailable: boolean;  // 是否上架
+  imageUrl?: string;     // 图片URL (可选)
+  createdAt: string;     // 创建时间
+  updatedAt: string;     // 更新时间
+}
+```
+
+#### 3. 订单(Order) 模型
+```typescript
+interface Order {
+  _id: string;           // 订单ID
+  roomNumber: string;    // 房号
+  items: Array<{         // 菜品项
+    dishId: string;      // 菜品ID
+    name: string;        // 菜品名称
+    quantity: number;    // 数量
+    price: number;       // 单价
+    subtotal: number;    // 小计 (quantity * price)
+  }>;
+  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'completed' | 'cancelled';
+  totalAmount: number;   // 总金额 (后端自动计算)
+  remark?: string;       // 备注
+  createdAt: string;     // 创建时间
+  updatedAt: string;     // 更新时间
+  tableNumber?: string;  // 桌号 (可选)
+}
+```
+
+#### 4. API响应格式
+```typescript
+// 成功响应
+interface ApiResponse<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+// 错误响应
+interface ApiError {
+  success: boolean;
+  error: string;
+  message?: string;
+}
+```
+
+#### 5. 状态流转规则
+- **订单状态**: `pending` → `confirmed` → `preparing` → `ready` → `delivered` → `completed`
+- **取消状态**: `pending` → `cancelled` (仅在待确认状态下可取消)
+- **完成状态**: `completed`/`cancelled` 为终态，不可逆转
+
+#### 6. API请求体示例
+```typescript
+// 创建订单请求
+interface CreateOrderRequest {
+  roomNumber: string;
+  items: Array<{
+    dishId: string;
+    quantity: number;
+  }>;
+  remark?: string;
+}
+
+// 更新订单状态请求
+interface UpdateOrderStatusRequest {
+  status: 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'completed' | 'cancelled';
+}
+```
+
 ### 核心业务接口
 - `GET /api/rooms/:roomNumber` - 获取房间信息
 - `GET /api/dishes` - 获取菜品列表（仅上架菜品）
