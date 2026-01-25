@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import User from '../models/User';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
 
 class AuthController {
   // 用户登录
@@ -12,6 +13,16 @@ class AuthController {
       // 验证输入
       if (!email || !password) {
         res.status(400).json({ error: '邮箱和密码是必填项' });
+        return;
+      }
+
+      // 检查数据库连接
+      if (mongoose.connection.readyState !== 1) {
+        console.error('Database not connected. Ready state:', mongoose.connection.readyState);
+        res.status(500).json({ 
+          error: '数据库连接不可用',
+          dbState: mongoose.connection.readyState
+        });
         return;
       }
 
@@ -53,9 +64,12 @@ class AuthController {
           modulePermissions: user.modulePermissions
         }
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('登录过程中发生错误:', error);
-      res.status(500).json({ error: '登录失败' });
+      res.status(500).json({ 
+        error: '登录失败',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   };
 

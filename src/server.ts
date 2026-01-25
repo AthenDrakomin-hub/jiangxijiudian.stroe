@@ -26,9 +26,25 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// 连接数据库
-connectDB().catch(error => {
-  console.error('Database connection failed:', error);
+// 连接数据库并等待连接完成
+let dbConnectionPromise: Promise<mongoose.Connection>;
+
+const initializeDatabase = async () => {
+  try {
+    console.log('Initializing database connection...');
+    dbConnectionPromise = connectDB();
+    await dbConnectionPromise;
+    console.log('Database connection established successfully');
+  } catch (error) {
+    console.error('Failed to initialize database connection:', error);
+    throw error;
+  }
+};
+
+// 立即开始数据库连接
+initializeDatabase().catch(error => {
+  console.error('Database initialization failed:', error);
+  // 在生产环境中，这里可能需要更严格的错误处理
 });
 
 // 确保在应用关闭时优雅地断开数据库连接
@@ -49,14 +65,46 @@ process.on('SIGTERM', async () => {
 });
 
 // 健康检查路由
-app.get('/health', (_req: Request, res: Response) => {
-  res.json({
-    status: 'ok',
-    db: mongoose.connection.readyState === 1,
-    s3: isS3Configured(),
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
-  });
+app.get('/health', async (_req: Request, res: Response) => {
+  try {
+    // 检查数据库连接状态
+    let dbStatus = 'unknown';
+    let dbError = null;
+    
+    try {
+      if (dbConnectionPromise) {
+        // 等待数据库连接完成
+        await Promise.race([
+          dbConnectionPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('DB connection timeout')), 5000))
+        ]);
+        dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+      } else {
+        dbStatus = 'not_initialized';
+      }
+    } catch (error: any) {
+      dbStatus = 'error';
+      dbError = error.message || 'Unknown error';
+    }
+    
+    res.json({
+      status: 'ok',
+      db: {
+        status: dbStatus,
+        error: dbError,
+        readyState: mongoose.connection.readyState,
+      },
+      s3: isS3Configured(),
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // 添加根路由
