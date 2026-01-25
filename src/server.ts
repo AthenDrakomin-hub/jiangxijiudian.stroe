@@ -68,10 +68,12 @@ import apiRoutes from './routes/api';
 import adminRoutes from './routes/admin';
 import stubRoutes from './routes/stub';
 import printRoutes from './routes/print';
+import authRoutes from './routes/auth';
 app.use('/api', apiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/data', stubRoutes); // 为新模型提供基础路由
 app.use('/api/print', printRoutes); // 打印服务路由
+app.use('/api/auth', authRoutes); // 认证服务路由
 
 
 
