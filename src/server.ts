@@ -7,6 +7,7 @@ import { isS3Configured } from './config/s3';
 import mongoose from 'mongoose';
 import { WebSocketServer, WebSocket } from 'ws';
 import http from 'http';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
 const app = express();
 
@@ -124,6 +125,12 @@ if (!process.env.VERCEL_ENV) {
     console.log(`Server running on port ${port}`);
   });
 }
+
+// 404 处理中间件
+app.use(notFoundHandler);
+
+// 错误处理中间件
+app.use(errorHandler);
 
 // 必须导出 app 供 Vercel 调用
 export default app;

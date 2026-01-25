@@ -11,21 +11,21 @@ class AuthController {
 
       // 验证输入
       if (!email || !password) {
-        res.status(400).json({ error: 'Email and password are required' });
+        res.status(400).json({ error: '邮箱和密码是必填项' });
         return;
       }
 
       // 查找用户
       const user = await User.findOne({ email });
       if (!user) {
-        res.status(401).json({ error: 'Invalid email or password' });
+        res.status(401).json({ error: '用户名或密码错误' });
         return;
       }
 
       // 验证密码
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
-        res.status(401).json({ error: 'Invalid email or password' });
+        res.status(401).json({ error: '用户名或密码错误' });
         return;
       }
 
@@ -54,8 +54,8 @@ class AuthController {
         }
       });
     } catch (error) {
-      console.error('Error during login:', error);
-      res.status(500).json({ error: 'Login failed' });
+      console.error('登录过程中发生错误:', error);
+      res.status(500).json({ error: '登录失败' });
     }
   };
 
@@ -66,7 +66,7 @@ class AuthController {
     try {
       const token = req.headers.authorization?.split(' ')[1];
       if (!token) {
-        res.status(401).json({ error: 'Access denied. No token provided.' });
+        res.status(401).json({ error: '访问被拒绝，未提供令牌。' });
         return;
       }
 
@@ -75,7 +75,7 @@ class AuthController {
 
       const user = await User.findById(decoded.userId, { password: 0 });
       if (!user) {
-        res.status(404).json({ error: 'User not found' });
+        res.status(404).json({ error: '用户未找到' });
         return;
       }
 
@@ -88,8 +88,8 @@ class AuthController {
         modulePermissions: user.modulePermissions
       });
     } catch (error) {
-      console.error('Error fetching current user:', error);
-      res.status(500).json({ error: 'Failed to fetch user information' });
+      console.error('获取当前用户信息时发生错误:', error);
+      res.status(500).json({ error: '获取用户信息失败' });
     }
   };
 }
