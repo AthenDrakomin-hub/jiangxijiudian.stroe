@@ -321,6 +321,9 @@ interface UpdateOrderStatusRequest {
 - `GET /health` - 健康检查
 - `GET /api/config` - 获取系统配置
 
+### 打印接口
+- `POST /api/print/orders/:id` - 打印订单到热敏打印机
+
 ## 商业价值声明
 
 ### 为餐厅带来的价值
