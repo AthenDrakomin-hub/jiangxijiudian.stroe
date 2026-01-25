@@ -178,6 +178,10 @@
 - Node.js 18+ 
 - MongoDB (本地或云端)
 
+### 环境变量配置
+
+- `FRONTEND_URL`: 前端域名，在生产环境中用于CORS配置，例如 `https://www.jiangxijiudian.store`
+
 ## 安装与运行
 
 ### 开发模式
