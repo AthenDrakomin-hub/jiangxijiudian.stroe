@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import api from './utils/api';
+import { api } from './utils/api';
 import { Order, Dish, Room, Category, Expense, Partner, User, UserRole, SystemConfig } from './types';
 import { Language } from './constants/translations';
 import AdminLayout from './components/AdminLayout';

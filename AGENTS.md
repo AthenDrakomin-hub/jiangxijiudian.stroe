@@ -11,6 +11,15 @@ This is a full-stack restaurant ordering system called "江云厨智能点餐系
 - Storage: AWS S3-compatible service (e.g., Supabase) for image uploads
 - Real-time communication: WebSocket for Kitchen Display System
 
+## Project Overview
+
+This is a full-stack restaurant ordering system called "江云厨智能点餐系统" (Jiangyun Chef Smart Ordering System) with:
+- Backend: Node.js, Express, TypeScript, MongoDB
+- Frontend: React, TypeScript, Tailwind CSS, Vite
+- Database: MongoDB with Mongoose ODM
+- Storage: AWS S3-compatible service (e.g., Supabase) for image uploads
+- Real-time communication: WebSocket for Kitchen Display System
+
 ## Architecture
 
 ### Backend Structure (src/)
@@ -85,59 +94,105 @@ This is a full-stack restaurant ordering system called "江云厨智能点餐系
 ### Setup
 ```bash
 npm install
-cd frontend && npm install
+# Note: Frontend dependencies are managed separately in the root package.json
 ```
 
 ### Environment Variables
-Copy `.env.example` to `.env` and configure `MONGODB_URI` and optional S3 settings
+Create `.env` file with the following required variables:
+- `MONGODB_URI` - MongoDB connection string
+- `JWT_SECRET` - Secret key for JWT token signing
+Optional S3 configuration:
+- `S3_ENDPOINT` - S3-compatible storage endpoint
+- `S3_REGION` - S3 region (defaults to ap-south-1)
+- `S3_ACCESS_KEY` - S3 access key
+- `S3_SECRET_KEY` - S3 secret key
+- `S3_BUCKET` - S3 bucket name (defaults to jx-cloud-dishes)
 
 ### Common Commands
-- `npm run dev` - Start development servers (both frontend and backend)
-- `npm run dev:server` - Start backend server only with ts-node-dev
-- `npm run dev:client` - Start frontend server only
+- `npm run dev` - Start development servers (both frontend and backend using concurrently)
+- `npm run dev:server` - Start backend server only with ts-node-dev (transpile-only mode)
+- `npm run dev:client` - Start frontend development server with Vite
 - `npm run dev:backend` - Alternative backend development command
 - `npm run dev:frontend` - Alternative frontend development command
 - `npm run build` - Build production versions of frontend and backend
 - `npm run build:full` - Full build including dependencies installation
+- `npm run build:frontend` - Build frontend only using Vite
+- `npm run build:backend` - Build backend only using TypeScript compiler
 - `npm run seed` - Seed database with sample data using src/scripts/seed.ts
-- `npm run start` - Start production server
+- `npm run start` - Start production server from dist folder
 - `npm run lint` - Run ESLint on TypeScript files
-- `npm run clean` - Remove dist directory
+- `npm run clean` - Remove dist directory using rimraf
 - `npm test` - Placeholder for backend tests
-- `cd frontend && npm test` - Run frontend tests with Jest/React Testing Library
+- `npm run prebuild` - Clean build directory (runs automatically before build)
+- `npm run postbuild` - Post-build success message (runs automatically after build)
 
-### Frontend Commands (cd frontend/)
-- `npm run dev` - Start development server with Vite (port 3000)
-- `npm run build` - Build for production with Vite
+### Frontend Development Commands
+- `npm run dev:client` - Start frontend development server with Vite on port 3000
+- `npm run build:frontend` - Build frontend for production with Vite
 - `npm run preview` - Preview production build locally
+
+Note: Frontend uses Vite proxy to forward API requests from port 3000 to backend on port 4000 during development.
 
 ## Testing
 
-- Frontend uses Jest with React Testing Library (@testing-library/react, @testing-library/jest-dom, @testing-library/user-event)
-- Backend testing can be implemented with similar testing libraries if needed
+### Frontend Testing
+- Uses Vitest with React Testing Library (@testing-library/react, @testing-library/jest-dom, @testing-library/user-event)
 - Test files should follow the naming convention `*.test.tsx` or `*.test.ts`
-- Currently no test files exist in the project
+- Run tests with: `npm test` in the frontend directory
+- Test environment configured with jsdom for DOM simulation
+
+### Backend Testing
+- Currently uses placeholder test command
+- Can be implemented with Jest or Vitest
+- Test files should follow the naming convention `*.test.ts`
+- MongoDB connection should be mocked or use test database
+
+### Current Test Status
+- No test files currently exist in the project
+- Test infrastructure is configured but not implemented
+- Consider implementing tests for critical business logic and API endpoints
 
 ## Environment Configuration
 
+### Required Environment Variables
 - `NODE_ENV` - Environment mode (development/production)
 - `PORT` - Server port (defaults to 4000)
-- `MONGODB_URI` - MongoDB connection string
-- `JWT_SECRET` - Secret key for JWT token signing (if implemented)
-- `S3_ENDPOINT` - S3-compatible storage endpoint (optional)
-- `S3_REGION` - S3 region (optional, defaults to ap-south-1)
-- `S3_ACCESS_KEY` - S3 access key (optional)
-- `S3_SECRET_KEY` - S3 secret key (optional)
-- `S3_BUCKET` - S3 bucket name (optional, defaults to jx-cloud-dishes)
+- `MONGODB_URI` - MongoDB connection string (required)
+- `JWT_SECRET` - Secret key for JWT token signing (required for auth)
+
+### Optional S3 Configuration
+- `S3_ENDPOINT` - S3-compatible storage endpoint
+- `S3_REGION` - S3 region (defaults to ap-south-1)
+- `S3_ACCESS_KEY` - S3 access key
+- `S3_SECRET_KEY` - S3 secret key
+- `S3_BUCKET` - S3 bucket name (defaults to jx-cloud-dishes)
+
+### Development vs Production
+- Development: Frontend runs on port 3000, backend on port 4000 with proxy
+- Production: Both served from same port with Vercel routing or built-in Express static serving
+- WebSocket connections use the same origin as HTTP requests (ws:// or wss://)
 
 ## Deployment
 
-- Configured for Vercel deployment
+### Vercel Deployment
+- Configured for Vercel deployment with serverless functions
 - Production builds serve frontend static files from backend
-- API routes: `/api/*`
-- Frontend routes: `/*` (SPA fallback)
-- Environment variables needed: `MONGODB_URI`
-- Vercel configuration in `vercel.json`
+- API routes: `/api/*` handled by serverless functions
+- Frontend routes: `/*` (SPA fallback to index.html)
+- Environment variables needed: `MONGODB_URI`, `JWT_SECRET`
+- WebSocket functionality limited in serverless environment
+
+### Local Production Deployment
+1. Build the project: `npm run build`
+2. Set environment variables in production
+3. Start production server: `npm start`
+4. Server will serve frontend static files and API endpoints
+
+### Vercel Configuration (`vercel.json`)
+- Routes API requests to serverless function handler
+- Rewrites all other requests to serve SPA index.html
+- Uses @vercel/node runtime for serverless functions
+- Static file serving for built frontend assets
 
 ## Key Dependencies
 
@@ -246,23 +301,54 @@ Copy `.env.example` to `.env` and configure `MONGODB_URI` and optional S3 settin
 
 ## Security Considerations
 
-- CORS configured to allow all origins (should be restricted in production)
-- Input validation through Mongoose schemas
-- Environment variables for sensitive configuration
-- Mock authentication currently in place (needs proper implementation)
-- API rate limiting should be implemented in production
-- JWT authentication implementation planned for future versions
-- WebSocket connections use the same origin as HTTP requests (ws:// or wss://)
-- Client-side authentication should be implemented for WebSocket connections in production
+### Current Security Status
+- CORS configured to allow all origins (should be restricted in production to specific domains)
+- Input validation through Mongoose schemas with type checking
+- Environment variables for sensitive configuration (database, S3, JWT)
+- Mock authentication currently in place (needs proper JWT implementation)
+- No API rate limiting implemented
+
+### Production Security Recommendations
+- Implement proper JWT authentication with role-based access control
+- Restrict CORS to specific allowed origins
+- Add API rate limiting middleware
+- Implement input sanitization and validation
+- Use HTTPS in production
+- Regular security audits and dependency updates
+- Implement proper WebSocket authentication
+- Add request logging and monitoring
+
+### Authentication Status
+- Currently uses mock authentication system
+- JWT implementation partially configured but not fully integrated
+- Role-based access control middleware exists but needs proper user management
+- Password hashing with bcryptjs is available but not fully implemented
 
 ## Additional Development Tips
 
-- To run backend tests: `npm test` (configure as needed)
-- To run frontend tests: `cd frontend && npm test`
-- To lint the backend code: `npm run lint` (requires ESLint setup)
+### Database Management
 - Sample data can be seeded using: `npm run seed`
 - The seed script initializes 12 modules: rooms, dishes, categories, partners, expenses, ingredients, system configs, staff, notifications
 - Seeded rooms include ranges 8201-8232, 8301-8332, plus VIP rooms 3333, 6666, 9999
 - Seeded dishes include 30+ sample menu items across multiple cuisine categories
+- MongoDB connection automatically closes on SIGINT/SIGTERM signals
+
+### Development Workflow
 - Frontend development server runs on port 3000 and proxies API requests to backend on port 4000
 - WebSocket connections are established at `/ws` endpoint for real-time KDS updates
+- Changes to TypeScript files trigger automatic restart via ts-node-dev
+- Vite provides hot module replacement for frontend development
+- Use `npm run clean` before major rebuilds to ensure fresh build
+
+### Debugging and Monitoring
+- Health check endpoint available at `/health` showing database and S3 status
+- WebSocket connections log connection/disconnection events
+- MongoDB connection state monitored in health checks
+- Console logs provide debugging information for WebSocket and database operations
+
+### Performance Considerations
+- MongoDB connection caching implemented for serverless environments
+- WebSocket connections maintained in memory for real-time updates
+- API responses include timeout handling (10 seconds)
+- Frontend implements safe API calls with fallback mechanisms
+- Lazy loading and code splitting recommended for large components
