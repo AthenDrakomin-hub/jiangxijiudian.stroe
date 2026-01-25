@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import dishesController from '../controllers/DishesController';
-import categoriesController from '../controllers/CategoriesController';
+import CategoriesController from '../controllers/CategoriesController';
 import ordersController from '../controllers/OrdersController';
 import staffController from '../controllers/StaffController';
 import inventoryController from '../controllers/InventoryController';
@@ -26,11 +26,11 @@ router.put('/dishes/:id', dishesController.updateDish);
 router.delete('/dishes/:id', dishesController.deleteDish);
 
 // 分类管理相关API
-router.get('/categories', categoriesController.getAllCategories);
-router.get('/categories/:id', categoriesController.getCategoryById);
-router.post('/categories', categoriesController.createCategory);
-router.put('/categories/:id', categoriesController.updateCategory);
-router.delete('/categories/:id', categoriesController.deleteCategory);
+router.get('/categories', CategoriesController.getAllCategories);
+router.get('/categories/:id', CategoriesController.getCategoryById);
+router.post('/categories', CategoriesController.createCategory);
+router.put('/categories/:id', CategoriesController.updateCategory);
+router.delete('/categories/:id', CategoriesController.deleteCategory);
 
 // 订单管理相关API（已在api.ts中定义，这里作为参考）
 // router.get('/orders', ordersController.getOrders);
