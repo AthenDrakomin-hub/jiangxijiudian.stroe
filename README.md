@@ -12,6 +12,7 @@
 - **TypeScript** - 强类型编程语言
 - **MongoDB** - NoSQL 数据库
 - **Mongoose** - MongoDB ODM
+- **AWS S3** - 通过S3协议连接Supabase存储
 - **WebSocket** - 实时通信
 - **Cors** - 跨域资源共享中间件
 

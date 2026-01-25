@@ -1,7 +1,8 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
-
+import path from 'path';
 import connectDB from './config/db';
+import { isS3Configured } from './config/s3';
 
 import mongoose from 'mongoose';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -51,7 +52,7 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
     db: mongoose.connection.readyState === 1,
-
+    s3: isS3Configured(),
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
   });
@@ -69,6 +70,7 @@ import stubRoutes from './routes/stub';
 app.use('/api', apiRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/data', stubRoutes); // 为新模型提供基础路由
+
 
 
 // 设置端口，优先使用环境变量，否则使用默认端口

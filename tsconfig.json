@@ -21,7 +21,10 @@
     "noFallthroughCasesInSwitch": true,
     "moduleResolution": "node",
     "baseUrl": "./",
-    "paths": {}
+    "paths": {},
+    "jsx": "react-jsx",
+    "allowSyntheticDefaultImports": true,
+    "lib": ["ES2020", "DOM"]
   },
   "include": [
     "src/**/*"
