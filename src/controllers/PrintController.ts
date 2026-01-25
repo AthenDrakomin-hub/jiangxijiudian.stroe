@@ -1,51 +1,56 @@
 import { Request, Response } from 'express';
-import { Printer, capabilities } from 'node-thermal-printer';
+import { printer as ThermalPrinter, PrinterTypes } from 'node-thermal-printer';
 import Order from '../models/Order';
+import { IOrderItem } from '../models/Order';
+import { Types } from 'mongoose';
 
-const printer = new Printer({
-  type: capabilities.Epson,
+const printer = new ThermalPrinter({
+  type: PrinterTypes.EPSON,
   interface: '/dev/usb/lp0', // 默认USB接口，可根据实际情况修改
 });
 
-export const printOrder = async (req: Request, res: Response) => {
+export const printOrder = async (req: Request, res: Response): Promise<void> => {
   try {
     const orderId = req.params.id;
     const order = await Order.findById(orderId);
 
     if (!order) {
-      return res.status(404).json({ 
+      res.status(404).json({ 
         success: false,
         message: '订单未找到' 
       });
+      return;
     }
 
     // 初始化打印机
-    await printer.init();
+    // 不需要显式初始化，直接开始打印命令
 
     // 打印标题
-    printer.align('center');
-    printer.setText('江西云厨智能点餐系统\n');
-    printer.setText('厨房订单\n');
-    printer.setText('================================\n');
+    printer.alignCenter();
+    printer.println('江西云厨智能点餐系统');
+    printer.println('厨房订单');
+    printer.drawLine();
 
     // 订单信息
-    printer.align('left');
-    printer.setText(`订单号: ${order._id.toString().substring(order._id.length - 6)}\n`);
-    printer.setText(`房号: ${order.roomNumber}\n`);
-    printer.setText(`下单时间: ${new Date(order.createdAt).toLocaleString()}\n`);
-    printer.setText('================================\n');
+    printer.alignLeft();
+    // 将 ObjectId 转换为字符串并获取最后6位
+    const orderIdStr = order._id.toString();
+    printer.println(`订单号: ${orderIdStr.substring(orderIdStr.length - 6)}`);
+    printer.println(`房号: ${order.roomNumber}`);
+    printer.println(`下单时间: ${new Date(order.createdAt).toLocaleString()}`);
+    printer.drawLine();
 
     // 菜品列表
-    order.items.forEach(item => {
-      printer.setText(`${item.name} x${item.quantity}\n`);
+    order.items.forEach((item: IOrderItem) => {
+      printer.println(`${item.name} x${item.quantity}`);
       // 使用 note 字段作为备注
       if (order.note) {
-        printer.setText(`  备注: ${order.note}\n`);
+        printer.println(`  备注: ${order.note}`);
       }
     });
 
-    printer.setText('================================\n');
-    printer.setText(`总计: ¥${order.totalAmount.toFixed(2)}\n`);
+    printer.drawLine();
+    printer.println(`总计: ¥${order.totalAmount.toFixed(2)}`);
     
     // 打印并切纸
     printer.cut();
