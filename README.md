@@ -86,6 +86,64 @@
 
 ## 部署方式
 
+### 后端API部署
+
+1. **Vercel部署**（推荐）
+   - 项目已配置 `vercel.json`，可直接部署到 Vercel
+   - 部署后将获得类似 `https://your-project-name.vercel.app` 的 URL
+   - API 端点将可通过 `https://your-project-name.vercel.app/api/*` 访问
+
+2. **环境变量配置**
+   - 复制 `.env.example` 为 `.env`
+   - 配置 `MONGODB_URI` 为 MongoDB Atlas 连接字符串
+   - 如需使用 S3 存储，配置 S3 相关参数
+
+3. **部署命令**
+   ```bash
+   # 构建项目
+   npm run build
+   
+   # 启动生产服务器
+   npm start
+   ```
+
+### 前端项目连接后端API
+
+1. **获取后端API URL**
+   - 使用已部署的后端API URL（如 `https://your-project-name.vercel.app`）
+
+2. **前端项目配置**
+   在前端项目的环境变量中设置：
+   ```env
+   REACT_APP_API_BASE_URL=https://your-project-name.vercel.app
+   ```
+
+3. **API请求配置**
+   ```javascript
+   // axios 或 fetch 配置
+   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+   
+   // 示例请求
+   fetch(`${API_BASE_URL}/api/dishes`)
+     .then(response => response.json())
+     .then(data => console.log(data));
+   ```
+
+4. **可用API端点**
+   - `GET ${API_BASE_URL}/api/dishes` - 获取菜品列表
+   - `GET ${API_BASE_URL}/api/rooms/:roomNumber` - 获取房间信息
+   - `POST ${API_BASE_URL}/api/orders` - 创建订单
+   - `GET ${API_BASE_URL}/api/orders` - 查询订单
+   - `PATCH ${API_BASE_URL}/api/orders/:id/status` - 更新订单状态
+   - `GET ${API_BASE_URL}/health` - 健康检查
+
+5. **WebSocket连接**
+   如需实时通信，使用：
+   ```javascript
+   const wsUrl = `wss://your-project-name.vercel.app/ws`;
+   const ws = new WebSocket(wsUrl);
+   ```
+
 ### 本地开发部署
 1. 克隆项目仓库
 2. 安装依赖：
