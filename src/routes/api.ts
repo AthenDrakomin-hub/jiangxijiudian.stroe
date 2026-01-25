@@ -5,19 +5,20 @@ import ordersController from '../controllers/OrdersController';
 import systemConfigController from '../controllers/SystemConfigController';
 import userController from '../controllers/UserController';
 import { verifyRole } from '../middleware/roleGuard';
+import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
 
 // 房间相关API路由
-router.get('/rooms/:roomNumber', roomsController.getRoomByNumber);
-router.get('/rooms', roomsController.getAllRooms);
+router.get('/rooms/:roomNumber', authMiddleware, roomsController.getRoomByNumber);
+router.get('/rooms', authMiddleware, roomsController.getAllRooms);
 
 // 菜品相关API路由
-router.get('/dishes', dishesController.getAllDishes);
-router.get('/dishes/:id', dishesController.getDishById);
-router.post('/dishes', dishesController.createDish);
-router.put('/dishes/:id', dishesController.updateDish);
-router.delete('/dishes/:id', dishesController.deleteDish);
+router.get('/dishes', authMiddleware, dishesController.getAllDishes);
+router.get('/dishes/:id', authMiddleware, dishesController.getDishById);
+router.post('/dishes', authMiddleware, dishesController.createDish);
+router.put('/dishes/:id', authMiddleware, dishesController.updateDish);
+router.delete('/dishes/:id', authMiddleware, dishesController.deleteDish);
 
 // 订单相关API路由 - 允许 admin 和 staff
 router.post('/orders', verifyRole(['admin', 'staff']), ordersController.createOrder);
@@ -25,8 +26,8 @@ router.patch('/orders/:id/status', verifyRole(['admin', 'staff']), ordersControl
 router.get('/orders/:id', verifyRole(['admin', 'staff']), ordersController.getOrderById);
 router.get('/orders', verifyRole(['admin', 'staff']), ordersController.getOrders);
 
-// 系统配置相关API路由 - 允许公开访问获取配置，但更新仍需要admin权限
-router.get('/config', systemConfigController.getConfig);
+// 系统配置相关API路由 - 需要认证访问
+router.get('/config', authMiddleware, systemConfigController.getConfig);
 router.patch('/config', verifyRole(['admin']), systemConfigController.updateConfig);
 
 // 用户管理相关API路由 - 仅允许 admin
