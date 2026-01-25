@@ -59,68 +59,7 @@ class AuthController {
     }
   };
 
-  // 用户注册
-  public register = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const { name, email, password, role = 'user' } = req.body;
 
-      // 验证输入
-      if (!name || !email || !password) {
-        res.status(400).json({ error: 'Name, email and password are required' });
-        return;
-      }
-
-      // 检查用户是否已存在
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-        res.status(409).json({ error: 'User with this email already exists' });
-        return;
-      }
-
-      // 加密密码
-      const saltRounds = 10;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-      // 创建新用户
-      const newUser = new User({
-        name,
-        email,
-        password: hashedPassword,
-        role,
-        isActive: true
-      });
-
-      const savedUser = await newUser.save();
-
-      // 生成JWT token
-      const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
-      const token = jwt.sign(
-        { 
-          userId: savedUser._id, 
-          email: savedUser.email, 
-          role: savedUser.role 
-        },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      res.status(201).json({
-        message: 'Registration successful',
-        token,
-        user: {
-          id: savedUser._id,
-          name: savedUser.name,
-          email: savedUser.email,
-          role: savedUser.role,
-          defaultLang: savedUser.defaultLang,
-          modulePermissions: savedUser.modulePermissions
-        }
-      });
-    } catch (error) {
-      console.error('Error during registration:', error);
-      res.status(500).json({ error: 'Registration failed' });
-    }
-  };
 
   // 获取当前用户信息
   public getCurrentUser = async (req: Request, res: Response): Promise<void> => {
