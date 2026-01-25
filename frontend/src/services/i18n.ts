@@ -1,1 +1,0 @@
-export const tSync = (key: string) => key;

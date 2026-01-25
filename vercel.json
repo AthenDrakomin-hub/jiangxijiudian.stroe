@@ -9,10 +9,6 @@
     {
       "source": "/api/(.*)",
       "destination": "/src/server.ts"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/frontend/dist/$1"
     }
   ]
 }

@@ -1,8 +1,8 @@
-# 江云厨智能点餐系统 (Jiangyun Chef Smart Ordering System)
+# 江云厨智能点餐系统 - 后端 API (Jiangyun Chef Smart Ordering System - Backend API)
 
 ## 项目概述
 
-这是一个全栈餐厅智能点餐系统，采用现代化技术栈构建，提供完整的餐饮业务解决方案。系统包含顾客点餐、订单管理、菜单管理、房间管理、厨房显示系统(KDS)等功能模块。
+这是一个现代化的餐厅智能点餐系统后端服务，采用Node.js + Express + TypeScript技术栈构建，提供完整的餐饮业务API解决方案。系统专注于提供RESTful API服务，支持顾客点餐、订单管理、菜单管理、房间管理等功能模块。
 
 ## 技术架构
 
@@ -12,25 +12,15 @@
 - **TypeScript** - 强类型编程语言
 - **MongoDB** - NoSQL 数据库
 - **Mongoose** - MongoDB ODM
-- **AWS S3** - 图像存储服务 (兼容 Supabase)
 - **WebSocket** - 实时通信
-
-### 前端技术栈
-- **React** - UI 组件库
-- **React Router DOM** - 路由管理
-- **Tailwind CSS** - 样式框架
-- **Vite** - 构建工具
-- **Axios** - HTTP 客户端
-- **Lucide React** - 图标库
-- **Recharts** - 数据可视化
+- **Cors** - 跨域资源共享中间件
 
 ## 项目结构
 
 ```
 ├── src/                           # 后端源代码
 │   ├── config/                    # 配置文件
-│   │   ├── db.ts                  # MongoDB 连接配置
-│   │   └── s3.ts                  # S3 存储配置
+│   │   └── db.ts                  # MongoDB 连接配置
 │   ├── controllers/               # 控制器层
 │   │   ├── CategoriesController.ts # 分类管理
 │   │   ├── DishesController.ts    # 菜品管理
@@ -57,25 +47,6 @@
 │   ├── types/                     # 类型定义
 │   ├── utils/                     # 工具函数
 │   └── server.ts                  # 主服务器入口
-├── frontend/                      # 前端源代码
-│   ├── public/                    # 静态资源
-│   ├── src/                       # 前端源码
-│   │   ├── components/            # React 组件
-│   │   │   ├── AdminLayout.tsx    # 管理员布局
-│   │   │   ├── Dashboard.tsx      # 仪表板
-│   │   │   ├── GuestOrderPage.tsx # 顾客点餐页面
-│   │   │   ├── OrderManagement.tsx # 订单管理
-│   │   │   ├── MenuManagement.tsx # 菜单管理
-│   │   │   ├── RoomGrid.tsx       # 房间网格
-│   │   │   ├── KitchenDisplaySystem.ts # 厨房显示系统
-│   │   │   └── LoginPage.tsx      # 登录页面
-│   │   ├── utils/                 # 工具函数
-│   │   │   └── api.ts             # API 服务
-│   │   ├── types/                 # 类型定义
-│   │   ├── constants/             # 常量定义
-│   │   └── App.tsx                # 主应用组件
-│   ├── package.json               # 前端依赖
-│   └── vite.config.ts             # Vite 配置
 ├── .env.example                   # 环境变量示例
 ├── .gitignore                     # Git 忽略配置
 ├── package.json                   # 项目依赖
@@ -105,13 +76,12 @@
 - **系统设置** - 主题配置和系统参数
 
 ### 特色功能
-- **厨房显示系统 (KDS)** - 实时显示厨房订单信息
-- **图像库管理** - 菜品图片上传和管理
-- **库存管理** - 原料库存跟踪
+- **厨房显示系统 (KDS)** - 通过 WebSocket 实现实时厨房订单推送
+- **库存管理** - 原料库存跟踪与预警
 - **支付管理** - 支付记录和状态管理
 - **注册审核** - 员工注册审批流程
 - **供应商管理** - 合作伙伴关系管理
-- **多主题支持** - 玻璃态、粘土风、盒子风、粗野主义等主题
+- **实时通信** - 基于 WebSocket 的订单状态实时推送
 
 ## 部署方式
 
@@ -120,7 +90,6 @@
 2. 安装依赖：
    ```bash
    npm install
-   cd frontend && npm install
    ```
 3. 配置环境变量（复制 `.env.example` 为 `.env` 并填写配置）
 4. 启动开发服务器：
@@ -138,11 +107,12 @@
    npm start
    ```
 
+注意：构建命令现在只编译后端TypeScript代码，不再包含前端构建步骤。
+
 ### Vercel 部署
 项目已配置 Vercel 部署，通过 `vercel.json` 文件实现：
 - API 请求转发至后端服务
-- 静态资源托管
-- SPA 路由回退支持
+- 专为后端API服务优化的路由配置
 
 ## 环境要求
 
@@ -156,7 +126,6 @@
 1. 安装依赖：
 ```bash
 npm install
-cd frontend && npm install
 ```
 
 2. 设置环境变量：
@@ -177,7 +146,7 @@ npm run dev
 npm run build
 ```
 
-这将同时构建前端和后端代码。
+这将构建后端TypeScript代码。
 
 ### 运行生产版本
 
@@ -187,12 +156,23 @@ npm start
 
 ## API 接口
 
-- `GET /api/dishes` - 获取菜品列表
-- `POST /api/orders` - 创建订单
-- `GET /api/orders` - 获取所有订单
-- `PATCH /api/orders/:id/status` - 更新订单状态
-- `GET /api/config` - 获取系统配置
+### 核心业务接口
+- `GET /api/rooms/:roomNumber` - 获取房间信息
+- `GET /api/dishes` - 获取菜品列表（仅上架菜品）
+- `POST /api/orders` - 创建订单（后端自动计算总价）
+- `GET /api/orders` - 查询订单（支持按状态和房间号筛选）
+- `GET /api/orders/:id` - 获取单个订单详情
+- `PATCH /api/orders/:id/status` - 更新订单状态（状态流转校验）
+
+### 管理接口
+- `GET /api/admin/orders` - 管理员获取所有订单
+- `POST /api/admin/dishes` - 管理员添加菜品
+- `PUT /api/admin/dishes/:id` - 管理员更新菜品
+- `DELETE /api/admin/dishes/:id` - 管理员删除菜品
+
+### 系统接口
 - `GET /health` - 健康检查
+- `GET /api/config` - 获取系统配置
 
 ## 商业价值声明
 
@@ -206,11 +186,11 @@ npm start
 7. **品牌形象升级** - 现代化点餐系统提升餐厅科技感和专业形象
 
 ### 技术优势
-1. **响应式设计** - 适配各种设备屏幕尺寸
+1. **RESTful API 设计** - 符合 REST 架构规范的 API 接口
 2. **实时同步** - WebSocket 实现实时数据更新
 3. **高扩展性** - 模块化架构便于功能扩展
 4. **安全性保障** - 多层次权限控制和数据保护
-5. **可定制性** - 主题和配置灵活调整
+5. **Serverless 友好** - 针对 Vercel 等 Serverless 平台优化
 
 ## 贡献指南
 
