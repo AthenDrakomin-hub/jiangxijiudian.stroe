@@ -32,18 +32,19 @@ app.use(cors(corsOptions));
 
 // 为 Vercel 环境添加额外的 CORS 头部处理
 app.use((req: Request, res: Response, next: () => void) => {
+  // 根据环境设置允许的来源
   const origin = process.env.NODE_ENV === 'production' 
     ? process.env.FRONTEND_URL || 'https://www.jiangxijiudian.store'
     : 'http://localhost:3000';
   
   res.header('Access-Control-Allow-Origin', origin);
   res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With');
+  res.header('Access-Control-Max-Age', '86400');
   
   // 如果是 OPTIONS 请求，直接返回 204
   if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With');
-    res.header('Access-Control-Max-Age', '86400');
     res.status(204).end();
     return;
   }
