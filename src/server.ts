@@ -41,6 +41,7 @@ const initializeDatabase = async () => {
   try {
     console.log('🔄 Initializing database connection...');
     console.log('🔧 Environment:', process.env.NODE_ENV || 'development');
+    console.log('☁️ Vercel Environment:', !!process.env.VERCEL);
     console.log('📡 MongoDB URI configured:', !!process.env.MONGODB_URI);
     
     dbConnectionPromise = connectDB();
@@ -63,6 +64,11 @@ const initializeDatabase = async () => {
       name: error.name,
       stack: error.stack
     });
+    
+    // 在Vercel Serverless环境中，数据库连接失败应该提供详细日志
+    if (process.env.VERCEL) {
+      console.error('☁️ Vercel environment detected: Ensure MONGODB_URI is set in Vercel Environment Variables');
+    }
     
     // 在生产环境中，数据库连接失败应该终止应用
     if (process.env.NODE_ENV === 'production') {

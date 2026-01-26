@@ -48,11 +48,14 @@ const connectDB = async (): Promise<mongoose.Connection> => {
       bufferCommands: false,
       connectTimeoutMS: 10000, // 10秒连接超时
       socketTimeoutMS: 45000,  // 45秒socket超时
-      maxPoolSize: 10,         // 连接池最大连接数
-      minPoolSize: 2,          // 连接池最小连接数
       serverSelectionTimeoutMS: 30000, // 服务器选择超时
       heartbeatFrequencyMS: 10000,     // 心跳频率
       retryWrites: true,       // 启用重试写入
+      retryReads: true,        // 启用重试读取
+      maxPoolSize: 1,          // 禁用连接池，适配Vercel Serverless短暂连接特性
+      minPoolSize: 0,          // Serverless环境不需要最小连接池
+      ssl: true,               // 显式开启TLS，匹配Atlas强制加密要求
+      tls: true
     }).then(mongooseInstance => {
       console.log('✅ MongoDB connection promise resolved');
       return mongooseInstance.connection;
