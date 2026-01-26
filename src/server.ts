@@ -15,42 +15,22 @@ const app = express();
 const server = http.createServer(app);
 
 // 配置CORS - 针对 Vercel 环境优化
+// 注意：由于 Vercel 层面已经设置了 CORS 头部，这里只需处理非 CORS 相关的功能
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || 'https://www.jiangxijiudian.store' // 生产环境使用环境变量指定的前端地址
-    : 'http://localhost:3000', // 开发环境使用常见前端端口
+  origin: process.env.FRONTEND_URL || 'https://www.jiangxijiudian.store',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
-  maxAge: 86400, // 24小时缓存预检请求
-  preflightContinue: false, // 不继续传递OPTIONS请求到下一个处理器
-  optionsSuccessStatus: 204 // OPTIONS请求成功的状态码
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Set-Cookie'],
+  // 只预处理，不实际设置头部（由 Vercel 处理）
+  preflightContinue: true
 };
 
-// 使用 cors 中间件
+// 使用 cors 中间件（主要用于验证和预处理）
 app.use(cors(corsOptions));
 
-// 为 Vercel 环境添加额外的 CORS 头部处理
-app.use((req: Request, res: Response, next: () => void) => {
-  // 根据环境设置允许的来源
-  const origin = process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || 'https://www.jiangxijiudian.store'
-    : 'http://localhost:3000';
-  
-  res.header('Access-Control-Allow-Origin', origin);
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With');
-  res.header('Access-Control-Max-Age', '86400');
-  
-  // 如果是 OPTIONS 请求，直接返回 204
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
-  
-  next();
-});
+// 专门处理OPTIONS预检请求
+app.options('*', cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
