@@ -14,6 +14,7 @@ import IngredientsController from '../controllers/IngredientsController';
 import ExpenseController from '../controllers/ExpenseController';
 import SystemConfigController from '../controllers/SystemConfigController';
 import RegistrationController from '../controllers/RegistrationController';
+import qrManagementController from '../controllers/QRManagementController';
 import { verifyRole, partnerFilterMiddleware } from '../middleware/roleGuard';
 
 const router = Router();
@@ -101,5 +102,11 @@ router.patch('/config', systemConfigController.updateConfig);
 router.post('/registration', RegistrationController.submitRegistration);
 router.get('/registration/verify/:token', RegistrationController.verifyRegistration);
 router.patch('/registration/approve/:id', RegistrationController.approveRegistration);
+
+// 二维码管理相关API
+router.get('/qr/config', verifyRole(['admin']), qrManagementController.getQRConfig);
+router.post('/qr/generate/:roomNumber', verifyRole(['admin']), qrManagementController.generateRoomQR);
+router.post('/qr/generate-all', verifyRole(['admin']), qrManagementController.generateAllQR);
+router.get('/qr/svg/:roomNumber', verifyRole(['admin']), qrManagementController.generateQRSVG);
 
 export default router;
