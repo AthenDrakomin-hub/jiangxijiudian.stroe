@@ -350,3 +350,21 @@ While the frontend code is not present in this repository, documentation indicat
 - Interface definitions for all data models
 - Request/response type safety using Express extensions
 - Strict TypeScript configuration in tsconfig.json
+
+## Additional API Endpoints
+
+### Authentication Endpoints
+- `POST /api/auth/login` - User authentication with JWT token generation
+
+### Print Service Endpoints
+- `POST /api/print/orders/:id` - Send order to thermal printer
+
+### Additional Admin Endpoints
+- `POST /api/admin/users` - Create new user accounts
+- `PUT /api/admin/users/:id` - Update user information
+- `DELETE /api/admin/users/:id` - Delete user account
+- `POST /api/admin/system-config` - Create system configuration
+- `PUT /api/admin/system-config/:key` - Update specific configuration value
+- `GET /api/admin/notifications` - Get system notifications
+- `POST /api/admin/notifications` - Create notification
+- `DELETE /api/admin/notifications/:id` - Delete notification
