@@ -107,6 +107,11 @@ app.get('/health', async (_req: Request, res: Response) => {
   }
 });
 
+// 添加 favicon 处理
+app.get('/favicon.ico', (req: Request, res: Response) => {
+  res.status(204).end();
+});
+
 // 添加根路由
 app.get('/', (req: Request, res: Response) => {
   res.json({ message: 'Restaurant Ordering API - Closed Loop MVP' });
@@ -124,7 +129,13 @@ app.use('/api/data', stubRoutes); // 为新模型提供基础路由
 app.use('/api/print', printRoutes); // 打印服务路由
 app.use('/api/auth', authRoutes); // 认证服务路由
 
-
+// 添加 favicon 处理（在所有 API 路由之后，但在错误处理之前）
+app.get('/favicon.ico', (req: Request, res: Response) => {
+  res.status(204).end();
+});
+app.get('/favicon.png', (req: Request, res: Response) => {
+  res.status(204).end();
+});
 
 // 设置端口，优先使用环境变量，否则使用默认端口
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 4000;

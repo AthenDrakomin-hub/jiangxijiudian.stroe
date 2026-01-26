@@ -6,16 +6,6 @@ This file provides guidance to Qoder (qoder.com) when working with code in this 
 
 This is a full-stack restaurant ordering system called "江云厨智能点餐系统" (Jiangyun Chef Smart Ordering System) with:
 - Backend: Node.js, Express, TypeScript, MongoDB
-- Frontend: React, TypeScript, Tailwind CSS, Vite
-- Database: MongoDB with Mongoose ODM
-- Storage: AWS S3-compatible service (e.g., Supabase) for image uploads
-- Real-time communication: WebSocket for Kitchen Display System
-
-## Project Overview
-
-This is a full-stack restaurant ordering system called "江云厨智能点餐系统" (Jiangyun Chef Smart Ordering System) with:
-- Backend: Node.js, Express, TypeScript, MongoDB
-- Frontend: React, TypeScript, Tailwind CSS, Vite
 - Database: MongoDB with Mongoose ODM
 - Storage: AWS S3-compatible service (e.g., Supabase) for image uploads
 - Real-time communication: WebSocket for Kitchen Display System
@@ -25,24 +15,17 @@ This is a full-stack restaurant ordering system called "江云厨智能点餐系
 ### Backend Structure (src/)
 - `config/` - Database and S3 configuration
 - `controllers/` - Request handlers for API endpoints
-- `middleware/` - Express middleware
+- `middleware/` - Express middleware (auth, role guard, error handling)
 - `models/` - Mongoose data models
 - `routes/` - API route definitions
-- `services/` - Business logic layer
-- `utils/` - Utility functions
 - `scripts/` - Database seeding and maintenance scripts
+- `services/` - Business logic layer
+- `types/` - TypeScript interfaces and types
+- `utils/` - Utility functions
 - `server.ts` - Main server entry point with WebSocket support
 
-### Frontend Structure (frontend/src/)
-- `components/` - React UI components (AdminLayout, OrderManagement, MenuManagement, etc.)
-- `utils/` - Frontend utility functions and API service
-- `services/` - Frontend services (authentication, notifications, etc.)
-- `types/` - TypeScript interfaces and types
-- `constants/` - Application constants and translations
-- `App.tsx` - Main application component with routing
-
 ### Core Models
-- `User` - System users with roles (admin, staff, guest)
+- `User` - System users with roles (admin, staff, partner)
 - `Room` - Restaurant tables/rooms with status tracking
 - `Dish` - Menu items with pricing and categorization
 - `Order` - Customer orders with status lifecycle
@@ -94,13 +77,13 @@ This is a full-stack restaurant ordering system called "江云厨智能点餐系
 ### Setup
 ```bash
 npm install
-# Note: Frontend dependencies are managed separately in the root package.json
 ```
 
 ### Environment Variables
 Create `.env` file with the following required variables:
 - `MONGODB_URI` - MongoDB connection string
 - `JWT_SECRET` - Secret key for JWT token signing
+- `FRONTEND_URL` - Frontend domain for production CORS configuration
 Optional S3 configuration:
 - `S3_ENDPOINT` - S3-compatible storage endpoint
 - `S3_REGION` - S3 region (defaults to ap-south-1)
@@ -109,48 +92,24 @@ Optional S3 configuration:
 - `S3_BUCKET` - S3 bucket name (defaults to jx-cloud-dishes)
 
 ### Common Commands
-- `npm run dev` - Start development servers (both frontend and backend using concurrently)
-- `npm run dev:server` - Start backend server only with ts-node-dev (transpile-only mode)
-- `npm run dev:client` - Start frontend development server with Vite
-- `npm run dev:backend` - Alternative backend development command
-- `npm run dev:frontend` - Alternative frontend development command
-- `npm run build` - Build production versions of frontend and backend
-- `npm run build:full` - Full build including dependencies installation
-- `npm run build:frontend` - Build frontend only using Vite
-- `npm run build:backend` - Build backend only using TypeScript compiler
+- `npm run dev` - Start development server with ts-node-dev (auto-restart on changes)
+- `npm run build` - Compile TypeScript code to JavaScript in dist directory
 - `npm run seed` - Seed database with sample data using src/scripts/seed.ts
 - `npm run start` - Start production server from dist folder
 - `npm run lint` - Run ESLint on TypeScript files
 - `npm run clean` - Remove dist directory using rimraf
-- `npm test` - Placeholder for backend tests
+- `npm test` - Placeholder for tests (no tests currently implemented)
 - `npm run prebuild` - Clean build directory (runs automatically before build)
 - `npm run postbuild` - Post-build success message (runs automatically after build)
 
-### Frontend Development Commands
-- `npm run dev:client` - Start frontend development server with Vite on port 3000
-- `npm run build:frontend` - Build frontend for production with Vite
-- `npm run preview` - Preview production build locally
-
-Note: Frontend uses Vite proxy to forward API requests from port 3000 to backend on port 4000 during development.
+Note: This is primarily a backend-only project despite references to frontend in some documentation. The actual frontend directory does not exist in the current project structure.
 
 ## Testing
-
-### Frontend Testing
-- Uses Vitest with React Testing Library (@testing-library/react, @testing-library/jest-dom, @testing-library/user-event)
-- Test files should follow the naming convention `*.test.tsx` or `*.test.ts`
-- Run tests with: `npm test` in the frontend directory
-- Test environment configured with jsdom for DOM simulation
-
-### Backend Testing
-- Currently uses placeholder test command
-- Can be implemented with Jest or Vitest
-- Test files should follow the naming convention `*.test.ts`
-- MongoDB connection should be mocked or use test database
 
 ### Current Test Status
 - No test files currently exist in the project
 - Test infrastructure is configured but not implemented
-- Consider implementing tests for critical business logic and API endpoints
+- Consider implementing tests for critical business logic and API endpoints using Vitest with React Testing Library
 
 ## Environment Configuration
 
@@ -159,6 +118,7 @@ Note: Frontend uses Vite proxy to forward API requests from port 3000 to backend
 - `PORT` - Server port (defaults to 4000)
 - `MONGODB_URI` - MongoDB connection string (required)
 - `JWT_SECRET` - Secret key for JWT token signing (required for auth)
+- `FRONTEND_URL` - Frontend domain in production for CORS
 
 ### Optional S3 Configuration
 - `S3_ENDPOINT` - S3-compatible storage endpoint
@@ -168,17 +128,15 @@ Note: Frontend uses Vite proxy to forward API requests from port 3000 to backend
 - `S3_BUCKET` - S3 bucket name (defaults to jx-cloud-dishes)
 
 ### Development vs Production
-- Development: Frontend runs on port 3000, backend on port 4000 with proxy
-- Production: Both served from same port with Vercel routing or built-in Express static serving
+- Development: Server runs on port 4000 with auto-restart
+- Production: Server runs from dist folder
 - WebSocket connections use the same origin as HTTP requests (ws:// or wss://)
 
 ## Deployment
 
 ### Vercel Deployment
 - Configured for Vercel deployment with serverless functions
-- Production builds serve frontend static files from backend
 - API routes: `/api/*` handled by serverless functions
-- Frontend routes: `/*` (SPA fallback to index.html)
 - Environment variables needed: `MONGODB_URI`, `JWT_SECRET`
 - WebSocket functionality limited in serverless environment
 
@@ -186,13 +144,11 @@ Note: Frontend uses Vite proxy to forward API requests from port 3000 to backend
 1. Build the project: `npm run build`
 2. Set environment variables in production
 3. Start production server: `npm start`
-4. Server will serve frontend static files and API endpoints
+4. Server will serve API endpoints
 
 ### Vercel Configuration (`vercel.json`)
 - Routes API requests to serverless function handler
-- Rewrites all other requests to serve SPA index.html
 - Uses @vercel/node runtime for serverless functions
-- Static file serving for built frontend assets
 
 ## Key Dependencies
 
@@ -205,19 +161,9 @@ Note: Frontend uses Vite proxy to forward API requests from port 3000 to backend
 - Ts-node-dev - Development TypeScript compiler with auto-restart
 - @aws-sdk/client-s3 - AWS S3 client for image uploads
 - ws - WebSocket library for real-time communication
-
-### Frontend
-- React - UI library
-- React Router DOM - Routing
-- Tailwind CSS - Styling
-- Axios - HTTP client
-- React Hook Form - Form handling
-- Yup - Form validation
-- Lucide React - Icon library
-- Recharts - Data visualization
-- Vite - Build tool and development server
-- Testing Library - Testing utilities
-- Supabase - Backend-as-a-service (configured but may not be actively used)
+- jsonwebtoken - JWT token implementation
+- bcryptjs - Password hashing
+- node-thermal-printer - Thermal printer support
 
 ## Application Features
 
@@ -249,7 +195,7 @@ Note: Frontend uses Vite proxy to forward API requests from port 3000 to backend
 - Translation Management - Multi-language support configuration
 
 ### Technical Features
-- Responsive design with mobile-first approach
+- RESTful API design following best practices
 - Real-time data synchronization via WebSocket
 - Multi-language support (Chinese/English)
 - QR code integration for room-based ordering
@@ -262,6 +208,8 @@ Note: Frontend uses Vite proxy to forward API requests from port 3000 to backend
 - WebSocket-based Kitchen Display System (KDS) for real-time order tracking
 - Automatic status transition timestamps (preparingAt, readyAt, deliveredAt)
 - Validated order status transitions to ensure business logic integrity
+- Role-based access control with admin, staff, and partner permissions
+- Data isolation for partners to only access their own records
 
 ## Data Models
 
@@ -273,6 +221,13 @@ Note: Frontend uses Vite proxy to forward API requests from port 3000 to backend
 - Automatic timestamp fields: preparingAt, readyAt, deliveredAt based on status changes
 - Valid status transitions: pending→(confirmed,cancelled), confirmed→(preparing,cancelled), preparing→(ready,cancelled), ready→delivered
 
+### User Model (`src/models/User.ts`)
+- Supports three roles: admin, staff, and partner
+- Password hashing with bcryptjs
+- Email validation and uniqueness constraints
+- Module-specific permissions for fine-grained access control
+- Partner-specific data isolation through partnerId
+
 ### Dish Model (`src/models/Dish.ts`)
 - Supports bilingual names (Chinese and English)
 - Availability tracking
@@ -282,47 +237,55 @@ Note: Frontend uses Vite proxy to forward API requests from port 3000 to backend
 ### Room Model (`src/models/Room.ts`)
 - Room/table number identification
 - Capacity tracking
-- Status management (available, occupied, reserved, maintenance)
+- Status management (available, occupied, maintenance)
 - Indexes for optimized queries
 
-## Frontend Architecture
+## Authentication & Authorization
 
-### API Service (`frontend/src/utils/api.ts`)
-- Centralized API service with safe fallbacks
-- MongoDB `_id` to frontend `id` mapping
-- Timeout handling and error recovery
-- Structured by entity (dishes, orders, rooms, etc.)
+### JWT-Based Authentication
+- Token-based authentication using jsonwebtoken
+- Middleware to verify tokens and attach user info to requests
+- Role-based access control with different permission levels
 
-### State Management
-- Global state management in App.tsx
-- Shared data context between components
-- Real-time data refresh capabilities
-- Loading state management
+### Role System
+- `admin`: Full system access, can manage all resources
+- `staff`: Access to order management, basic operations
+- `partner`: Limited access to their own data only, with data isolation
+
+### Security Features
+- Passwords hashed with bcryptjs
+- Role verification middleware
+- Partner data isolation through middleware
+- Protected routes based on user roles
+
+## Frontend Architecture (Documentation Reference)
+
+While the frontend code is not present in this repository, documentation indicates:
+- React-based frontend with TypeScript
+- Tailwind CSS for styling
+- Vite as build tool
+- API service with safe fallbacks
+- Global state management
+- WebSocket integration for real-time updates
 
 ## Security Considerations
 
-### Current Security Status
-- CORS configured to allow all origins (should be restricted in production to specific domains)
+### Current Security Implementation
+- JWT-based authentication with role-based access control
 - Input validation through Mongoose schemas with type checking
 - Environment variables for sensitive configuration (database, S3, JWT)
-- Mock authentication currently in place (needs proper JWT implementation)
-- No API rate limiting implemented
+- Password hashing with bcryptjs
+- Role-based access control with admin, staff, and partner roles
+- Partner data isolation through middleware
+- CORS configured differently for development (wildcard) vs production (specific domains)
 
-### Production Security Recommendations
-- Implement proper JWT authentication with role-based access control
-- Restrict CORS to specific allowed origins
-- Add API rate limiting middleware
-- Implement input sanitization and validation
-- Use HTTPS in production
-- Regular security audits and dependency updates
-- Implement proper WebSocket authentication
-- Add request logging and monitoring
-
-### Authentication Status
-- Currently uses mock authentication system
-- JWT implementation partially configured but not fully integrated
-- Role-based access control middleware exists but needs proper user management
-- Password hashing with bcryptjs is available but not fully implemented
+### Production Security Measures
+- Proper JWT authentication with role-based access control
+- Restrict CORS to specific allowed origins in production
+- Input sanitization and validation
+- HTTPS enforcement in production
+- API rate limiting (to be implemented)
+- Request logging and monitoring
 
 ## Additional Development Tips
 
@@ -334,10 +297,8 @@ Note: Frontend uses Vite proxy to forward API requests from port 3000 to backend
 - MongoDB connection automatically closes on SIGINT/SIGTERM signals
 
 ### Development Workflow
-- Frontend development server runs on port 3000 and proxies API requests to backend on port 4000
 - WebSocket connections are established at `/ws` endpoint for real-time KDS updates
 - Changes to TypeScript files trigger automatic restart via ts-node-dev
-- Vite provides hot module replacement for frontend development
 - Use `npm run clean` before major rebuilds to ensure fresh build
 
 ### Debugging and Monitoring
@@ -349,6 +310,43 @@ Note: Frontend uses Vite proxy to forward API requests from port 3000 to backend
 ### Performance Considerations
 - MongoDB connection caching implemented for serverless environments
 - WebSocket connections maintained in memory for real-time updates
-- API responses include timeout handling (10 seconds)
-- Frontend implements safe API calls with fallback mechanisms
-- Lazy loading and code splitting recommended for large components
+- API responses include timeout handling
+- Proper indexing on database collections for optimized queries
+
+## WebSocket Real-Time System
+
+### Kitchen Display System (KDS)
+- Implemented using WebSocket protocol via the `ws` library
+- Endpoint: `/ws` for real-time order updates
+- Broadcast functionality exported as `broadcastToClients` from server.ts
+- Used in OrdersController for real-time order creation and status updates
+- Messages include:
+  - `NEW_ORDER` - When a new order is created
+  - `ORDER_STATUS_UPDATE` - When order status changes
+  - `CONNECTION_ESTABLISHED` - Welcome message to new clients
+
+### Broadcasting Mechanism
+- WebSocket server integrated with Express HTTP server
+- Maintains a Set of active WebSocket connections
+- Broadcasts messages to all connected clients simultaneously
+- Used for real-time order tracking in kitchen display systems
+
+## API Design Patterns
+
+### Controller Structure
+- Each controller follows consistent async/await pattern
+- Standard error handling with try/catch blocks
+- Proper HTTP status codes for different response scenarios
+- Detailed error logging for debugging purposes
+
+### Middleware Implementation
+- Authentication middleware (`authMiddleware`) for basic JWT verification
+- Role verification middleware (`verifyRole`) for access control
+- Partner filter middleware for data isolation
+- Error handling middleware for centralized error responses
+
+### Type Safety
+- Strong TypeScript typing throughout the codebase
+- Interface definitions for all data models
+- Request/response type safety using Express extensions
+- Strict TypeScript configuration in tsconfig.json
