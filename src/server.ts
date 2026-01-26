@@ -39,20 +39,59 @@ let dbConnectionPromise: Promise<mongoose.Connection>;
 
 const initializeDatabase = async () => {
   try {
-    console.log('Initializing database connection...');
+    console.log('🔄 Initializing database connection...');
+    console.log('🔧 Environment:', process.env.NODE_ENV || 'development');
+    console.log('📡 MongoDB URI configured:', !!process.env.MONGODB_URI);
+    
     dbConnectionPromise = connectDB();
-    await dbConnectionPromise;
-    console.log('Database connection established successfully');
-  } catch (error) {
-    console.error('Failed to initialize database connection:', error);
+    
+    console.log('⏳ Waiting for database connection to complete...');
+    const connection = await dbConnectionPromise;
+    
+    console.log('✅ Database connection established successfully!');
+    console.log('📊 Connection details:', {
+      host: connection.host,
+      name: connection.name,
+      port: connection.port,
+      readyState: connection.readyState
+    });
+    
+  } catch (error: any) {
+    console.error('💥 DATABASE INITIALIZATION FAILED!');
+    console.error('📋 Error Details:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
+    
+    // 在生产环境中，数据库连接失败应该终止应用
+    if (process.env.NODE_ENV === 'production') {
+      console.error('🚨 Production environment: Shutting down due to database failure');
+      process.exit(1);
+    }
+    
+    // 在开发环境中，继续启动但标记数据库不可用
+    console.warn('⚠️ Continuing startup with database unavailable...');
     throw error;
   }
 };
 
 // 立即开始数据库连接
+console.log('🚀 Starting database initialization process...');
 initializeDatabase().catch(error => {
-  console.error('Database initialization failed:', error);
-  // 在生产环境中，这里可能需要更严格的错误处理
+  console.error('💥 Critical: Database initialization failed completely!');
+  console.error('📋 Error:', error);
+  
+  // 在Vercel等Serverless环境中，数据库连接失败通常意味着应用无法正常工作
+  if (process.env.VERCEL) {
+    console.error('☁️ Vercel environment: Database connection is critical for this application');
+  }
+  
+  // 不要让应用在数据库连接失败的情况下继续运行
+  if (process.env.NODE_ENV === 'production') {
+    console.error('🚨 Production: Exiting due to critical database failure');
+    process.exit(1);
+  }
 });
 
 // 确保在应用关闭时优雅地断开数据库连接
