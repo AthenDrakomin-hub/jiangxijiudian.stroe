@@ -14,7 +14,7 @@ const app = express();
 // 创建HTTP服务器
 const server = http.createServer(app);
 
-// 配置CORS
+// 配置CORS - 针对 Vercel 环境优化
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
     ? process.env.FRONTEND_URL || 'https://www.jiangxijiudian.store' // 生产环境使用环境变量指定的前端地址
@@ -27,7 +27,29 @@ const corsOptions = {
   optionsSuccessStatus: 204 // OPTIONS请求成功的状态码
 };
 
+// 使用 cors 中间件
 app.use(cors(corsOptions));
+
+// 为 Vercel 环境添加额外的 CORS 头部处理
+app.use((req: Request, res: Response, next: () => void) => {
+  const origin = process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL || 'https://www.jiangxijiudian.store'
+    : 'http://localhost:3000';
+  
+  res.header('Access-Control-Allow-Origin', origin);
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // 如果是 OPTIONS 请求，直接返回 204
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With');
+    res.header('Access-Control-Max-Age', '86400');
+    res.status(204).end();
+    return;
+  }
+  
+  next();
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
