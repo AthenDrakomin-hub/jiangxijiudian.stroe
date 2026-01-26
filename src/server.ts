@@ -22,23 +22,12 @@ const corsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH', 'HEAD'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+  maxAge: 86400, // 24小时缓存预检请求
+  preflightContinue: false, // 不继续传递OPTIONS请求到下一个处理器
+  optionsSuccessStatus: 204 // OPTIONS请求成功的状态码
 };
 
 app.use(cors(corsOptions));
-
-// 显式处理所有路由的 OPTIONS 请求以支持预检请求
-app.options('*', (req: Request, res: Response) => {
-  const origin = process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || 'https://www.jiangxijiudian.store'
-    : 'http://localhost:3000';
-  
-  res.header('Access-Control-Allow-Origin', origin);
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept, X-Requested-With');
-  res.header('Access-Control-Max-Age', '86400'); // 24小时缓存预检请求
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.status(200).end();
-});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
