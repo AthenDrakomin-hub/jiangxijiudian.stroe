@@ -41,7 +41,7 @@ const RoomSchema = new mongoose.Schema<IRoom>({
 });
 
 // 索引优化
-RoomSchema.index({ roomNumber: 1 });
+// roomNumber 的唯一索引由 unique: true 自动生成，无需手动添加
 RoomSchema.index({ status: 1 });
 
 const Room = mongoose.model<IRoom>('Room', RoomSchema);
