@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import path from 'path';
-import connectDB from './config/db';
+import connectDB from './config/vercel-mongoose';
 import { isS3Configured } from './config/s3';
 
 import mongoose from 'mongoose';

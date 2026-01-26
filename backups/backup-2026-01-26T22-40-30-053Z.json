@@ -1,0 +1,35 @@
+{
+  "users": [
+    {
+      "_id": "69770fffc92d1f1f0e932a89",
+      "name": "Admin User",
+      "email": "admin@jx.com",
+      "password": "$2b$10$bnfAQwrufJDzd/tkU9yHaer1jsbXuU4mi6GMqBzz2s2.RUWRwqJqW",
+      "role": "admin",
+      "defaultLang": "zh",
+      "modulePermissions": {
+        "dashboard": true,
+        "orderManagement": true,
+        "menuManagement": true,
+        "roomManagement": true,
+        "supplyChain": true,
+        "financialCenter": true,
+        "staffManagement": true,
+        "systemSettings": true,
+        "categoryManagement": true,
+        "inventoryManagement": true,
+        "paymentManagement": true,
+        "imageLibrary": true,
+        "kds": true,
+        "registrationReview": true,
+        "ingredientManagement": true,
+        "partnerManagement": true,
+        "translationManagement": true
+      },
+      "isActive": true,
+      "createdAt": "2026-01-26T06:55:59.645Z",
+      "updatedAt": "2026-01-26T06:55:59.645Z",
+      "__v": 0
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import connectDB from './config/db';
+import connectDB from './config/vercel-mongoose';
 
 // 测试数据库连接
 async function testDBConnection() {
