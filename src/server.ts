@@ -17,7 +17,7 @@ const server = http.createServer(app);
 // 配置CORS - 针对 Vercel 环境优化
 // 注意：由于 Vercel 层面已经设置了 CORS 头部，这里只需处理非 CORS 相关的功能
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'https://www.jiangxijiudian.store',
+  origin: process.env.FRONTEND_URL || 'https://www.jxfdfsfresh.vip',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
