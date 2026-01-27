@@ -75,5 +75,21 @@ export default connectDB;
 // 为了兼容现有代码，提供获取数据库实例的方法
 export const getDatabase = async () => {
   const client = await connectDB();
-  return client.db('JIANGXIJIUDIAN'); // 使用目标数据库名
+  // 从MONGODB_URI中提取数据库名称，或使用默认值
+  const dbName = process.env.DB_NAME || extractDbNameFromUri(process.env.MONGODB_URI) || 'defaultdb';
+  return client.db(dbName); // 使用动态数据库名
+};
+
+// 从MongoDB连接字符串中提取数据库名的辅助函数
+const extractDbNameFromUri = (uri: string | undefined): string | null => {
+  if (!uri) return null;
+  try {
+    const url = new URL(uri);
+    // 从路径中提取数据库名 (mongodb+srv://.../database_name?...)
+    const dbName = url.pathname.split('/')[1];
+    return dbName || null;
+  } catch (error) {
+    console.warn('⚠️ 无法从MONGODB_URI中解析数据库名称:', error);
+    return null;
+  }
 };
