@@ -4,7 +4,6 @@ const connectDB = async (): Promise<Connection> => {
   try {
     // 保留禁用缓冲（之前已验证有效）
     mongoose.set('bufferCommands', false);
-    mongoose.set('bufferMaxEntries', 0);
     console.log('📌 已禁用Mongoose操作缓冲，避免Serverless冷启动超时');
 
     console.log('🔄 初始化数据库连接...');
