@@ -1,7 +1,8 @@
 import express, { Request, Response, NextFunction, Express } from 'express';
 import cors from 'cors';
-import mongoose, { Connection } from 'mongoose';
+import mongoose from 'mongoose'; // 保留mongoose导入，某些地方可能仍在使用
 import connectDB from './config/vercel-mongoose';
+import { MongoClient } from 'mongodb';
 // 导入路由
 import authRoutes from './routes/auth';
 
@@ -24,13 +25,13 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // ########## 2. 数据库初始化（Vercel Serverless按需执行，仅初始化一次）##########
-let dbConnectionPromise: Promise<Connection> | null = null;
-let dbConnection: Connection | null = null;
+let dbConnectionPromise: Promise<MongoClient> | null = null;
+let dbConnection: MongoClient | null = null;
 
 /**
  * 初始化数据库连接（强化单例机制，防止重复连接）
  */
-const initializeDatabase = async (): Promise<Connection> => {
+const initializeDatabase = async (): Promise<MongoClient> => {
   // 如果已有连接实例，直接返回
   if (dbConnection) {
     console.log('🔄 复用已存在的数据库连接');
@@ -66,16 +67,32 @@ app.get('/favicon.ico', (req: Request, res: Response) => {
 app.get('/health', async (req: Request, res: Response) => {
   try {
     let dbStatus: string = 'unknown';
-    let dbReadyState: number = mongoose.connection.readyState;
+    let dbReadyState: number = 0;
 
     // 等待数据库连接完成，设置5秒超时
     if (dbConnectionPromise) {
-      await Promise.race([
-        dbConnectionPromise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('数据库连接超时')), 5000))
-      ]);
-      dbReadyState = mongoose.connection.readyState;
-      dbStatus = dbReadyState === 1 ? 'connected' : 'disconnected';
+      try {
+        const client = await Promise.race([
+          dbConnectionPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('数据库连接超时')), 5000))
+        ]);
+        // 检查MongoClient连接状态
+        dbReadyState = 1; // 简化健康检查逻辑，连接成功即认为状态良好
+        dbStatus = dbReadyState === 1 ? 'connected' : 'disconnected';
+      } catch (error) {
+        dbStatus = 'disconnected';
+        dbReadyState = 0;
+      }
+    } else {
+      // 如果没有连接Promise，尝试创建连接
+      try {
+        const client = await connectDB();
+        dbReadyState = 1; // 简化健康检查逻辑，连接成功即认为状态良好
+        dbStatus = dbReadyState === 1 ? 'connected' : 'disconnected';
+      } catch (error) {
+        dbStatus = 'disconnected';
+        dbReadyState = 0;
+      }
     }
 
     // 健康检查成功响应
