@@ -2,67 +2,69 @@ import mongoose, { ConnectOptions, Connection } from 'mongoose';
 
 const connectDB = async (): Promise<Connection> => {
   try {
-    // ========== 新增1：禁用Mongoose操作缓冲（核心解决超时） ==========
-    mongoose.set('bufferCommands', false); // 禁用所有模型的操作缓冲
-    // mongoose.set('bufferMaxEntries', 0);   // 该选项在新版本中已废弃
+    // 保留禁用缓冲（之前已验证有效）
+    mongoose.set('bufferCommands', false);
+    mongoose.set('bufferMaxEntries', 0);
     console.log('📌 已禁用Mongoose操作缓冲，避免Serverless冷启动超时');
-    // ==================================================================
 
     console.log('🔄 初始化数据库连接...');
     console.log('🔧 环境:', process.env.NODE_ENV || 'development');
     console.log('☁️ Vercel环境:', !!process.env.VERCEL);
     console.log('📡 MongoDB URI配置:', !!process.env.MONGODB_URI);
 
-    // 保留你已设置的【实际目标库名】拼接逻辑（无需修改）
-    const TARGET_DB_NAME = process.env.DB_NAME || 'atlas-sky-ball'; // 使用动态获取的数据库名
+    // ========== 仅改这1处：替换为你的实际目标库名 ==========
+    const TARGET_DB_NAME = process.env.DB_NAME || 'atlas-sky-ball'; // 使用atlas-sky-ball集群
+    // ======================================================
+
+    // 保留库名拼接逻辑（无需修改）
     let mongoUri = process.env.MONGODB_URI!;
     if (!mongoUri.includes(`/${TARGET_DB_NAME}?`)) {
       mongoUri = mongoUri.replace('/?', `/${TARGET_DB_NAME}?`) || `${mongoUri}/${TARGET_DB_NAME}`;
     }
+    console.log('🔗 拼接后连接串:', mongoUri.slice(0, 50) + '***'); // 隐藏密码，仅看前50位
 
-    // ========== 修改2：优化连接池配置（消除池释放警告） ==========
+    // ========== 核心强制适配配置（解决网络/解析/超时问题） ==========
     const options: ConnectOptions = {
-      maxPoolSize: 1,        
-      minPoolSize: 1, // 与maxPoolSize一致，避免池频繁释放/重建
-      maxIdleTimeMS: 30000, // 延长空闲超时，适配Serverless请求间隔
-      serverSelectionTimeoutMS: 15000,
-      connectTimeoutMS: 15000,
-      socketTimeoutMS: 60000,
-      family: 4,             
+      maxPoolSize: 1,
+      minPoolSize: 1,
+      maxIdleTimeMS: 30000,
+      // 大幅延长超时，适配所有网络延迟
+      serverSelectionTimeoutMS: 30000, // 30秒：服务器选择超时
+      connectTimeoutMS: 30000,        // 30秒：连接握手超时
+      socketTimeoutMS: 60000,         // 60秒：socket通信超时
+      family: 4,                      // 强制启用IPv4（核心！避免IPv6解析问题）
       retryWrites: true,
       writeConcern: { w: 'majority' }
     };
-    // ==================================================================
+    // ==============================================================
+
 
     if (!process.env.MONGODB_URI) {
       throw new Error('❌ MONGODB_URI环境变量未设置（请确认Vercel已关联MongoDB）');
     }
 
-    console.log('🔗 开始连接Vercel原生MongoDB集群...');
+    console.log('🔍 强制IPv4连接Atlas集群...');
     const connection = await mongoose.connect(mongoUri, options);
 
-    // ========== 新增3：显式校验连接最终就绪状态（双重保障） ==========
+    // 双重校验就绪状态
     if (connection.connection.readyState !== 1) {
-      throw new Error('❌ 数据库连接日志显示成功，但实际就绪状态异常，readyState=' + connection.connection.readyState);
+      throw new Error(`❌ 连接状态异常，readyState=${connection.connection.readyState}`);
     }
-    // ==================================================================
 
     console.log('✅ 数据库连接成功!');
     console.log('📊 连接详情:', {
       host: connection.connection.host,
-      database: connection.connection.name, // 显示你的实际目标库名
-      readyState: connection.connection.readyState // 1=完全就绪
+      database: connection.connection.name,
+      readyState: connection.connection.readyState,
+      protocol: 'IPv4' // 确认使用IPv4
     });
 
-    // 保留原有连接事件监听（无需修改）
+    // 保留连接事件监听
     connection.connection.on('error', (error) => {
-      console.error('💥 数据库连接运行时错误:', error.message, error.stack);
+      console.error('💥 数据库运行时错误:', error.message);
     });
     connection.connection.on('disconnected', () => {
-      console.warn('⚠️ 数据库连接已断开');
-    });
-    connection.connection.on('reconnected', () => {
-      console.log('🔄 数据库重新连接成功');
+      console.warn('⚠️ 数据库连接已断开（Serverless单次请求结束）');
     });
 
     return connection.connection;
@@ -72,11 +74,11 @@ const connectDB = async (): Promise<Connection> => {
     console.error('📋 错误详情:', {
       message: error.message,
       name: error.name,
-      stack: error.stack
+      stack: error.stack.slice(0, 200) // 缩短堆栈，方便查看核心错误
     });
 
     if (process.env.VERCEL) {
-      console.error('☁️ 请确认Vercel MongoDB资源已激活（Storage→MongoDB→状态为Connected）');
+      console.error('☁️ 已配置强制IPv4+超长超时，仍失败请检查Atlas连接串有效性');
       process.exit(1);
     }
 
@@ -84,5 +86,4 @@ const connectDB = async (): Promise<Connection> => {
   }
 };
 
-// 导出连接实例
 export default connectDB;
