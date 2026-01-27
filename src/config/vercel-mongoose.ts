@@ -11,16 +11,9 @@ const connectDB = async (): Promise<Connection> => {
     console.log('☁️ Vercel环境:', !!process.env.VERCEL);
     console.log('📡 MongoDB URI配置:', !!process.env.MONGODB_URI);
 
-    // ========== 仅改这1处：替换为你的实际目标库名 ==========
-    const TARGET_DB_NAME = process.env.DB_NAME || 'atlas-sky-ball'; // 使用atlas-sky-ball集群
-    // ======================================================
-
-    // 保留库名拼接逻辑（无需修改）
-    let mongoUri = process.env.MONGODB_URI!;
-    if (!mongoUri.includes(`/${TARGET_DB_NAME}?`)) {
-      mongoUri = mongoUri.replace('/?', `/${TARGET_DB_NAME}?`) || `${mongoUri}/${TARGET_DB_NAME}`;
-    }
-    console.log('🔗 拼接后连接串:', mongoUri.slice(0, 50) + '***'); // 隐藏密码，仅看前50位
+    // 使用Vercel原生集成提供的环境变量
+    const mongoUri = process.env.MONGODB_URI!;
+    console.log('🔗 原生集成连接串:', mongoUri.slice(0, 50) + '***'); // 隐藏密码，仅看前50位
 
     // ========== 核心强制适配配置（解决网络/解析/超时问题） ==========
     const options: ConnectOptions = {
@@ -42,7 +35,7 @@ const connectDB = async (): Promise<Connection> => {
       throw new Error('❌ MONGODB_URI环境变量未设置（请确认Vercel已关联MongoDB）');
     }
 
-    console.log('🔍 强制IPv4连接Atlas集群...');
+    console.log('🔍 使用Vercel原生集成连接MongoDB Atlas...');
     const connection = await mongoose.connect(mongoUri, options);
 
     // 双重校验就绪状态
@@ -55,7 +48,8 @@ const connectDB = async (): Promise<Connection> => {
       host: connection.connection.host,
       database: connection.connection.name,
       readyState: connection.connection.readyState,
-      protocol: 'IPv4' // 确认使用IPv4
+      protocol: 'IPv4',
+      integration: 'Vercel Native Integration'
     });
 
     // 保留连接事件监听
@@ -64,6 +58,9 @@ const connectDB = async (): Promise<Connection> => {
     });
     connection.connection.on('disconnected', () => {
       console.warn('⚠️ 数据库连接已断开（Serverless单次请求结束）');
+    });
+    connection.connection.on('reconnected', () => {
+      console.log('🔄 数据库重新连接成功');
     });
 
     return connection.connection;
