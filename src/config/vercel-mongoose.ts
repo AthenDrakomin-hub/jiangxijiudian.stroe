@@ -31,13 +31,21 @@ const connectDB = async (): Promise<Connection> => {
       writeConcern: { w: 'majority' }
     };
 
-    // 校验Vercel自动生成的MONGODB_URI
+    // ========== 核心修改：替换为你的实际目标库名 ==========
+    const TARGET_DB_NAME = 'JIANGXIJIUDIAN'; // 例：TARGET_DB_NAME = 'jiangxi-hotel'
+    let mongoUri = process.env.MONGODB_URI!;
+    // 自动拼接目标库名，保留原有连接串查询参数（不影响连接）
+    if (!mongoUri.includes(`/${TARGET_DB_NAME}?`)) {
+      mongoUri = mongoUri.replace('/?', `/${TARGET_DB_NAME}?`) || `${mongoUri}/${TARGET_DB_NAME}`;
+    }
+    // ======================================================
+
     if (!process.env.MONGODB_URI) {
       throw new Error('❌ MONGODB_URI环境变量未设置（请确认Vercel已关联MongoDB：Storage→MongoDB）');
     }
 
     console.log('🔗 开始连接Vercel原生MongoDB集群...');
-    const connection = await mongoose.connect(process.env.MONGODB_URI, options);
+    const connection = await mongoose.connect(mongoUri, options); // 用拼接后的新地址连接
 
     // 连接成功后清除超时
     clearTimeout(connectTimeout);
