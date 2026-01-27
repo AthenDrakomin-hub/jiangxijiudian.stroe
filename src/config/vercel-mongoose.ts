@@ -14,16 +14,24 @@ const connectDB = async (): Promise<Connection> => {
     // 使用Vercel原生集成提供的环境变量，并确保连接到正确的数据库
     let mongoUri = process.env.MONGODB_URI!;
     
-    // 检查连接字符串是否指定了数据库，如果没有，则追加正确的数据库名称
-    if (!mongoUri.includes('/atlas-sky-ball') && !mongoUri.includes('?') && !mongoUri.includes('&db=')) {
-      if (mongoUri.endsWith('/')) {
-        mongoUri = mongoUri + 'atlas-sky-ball';
-      } else {
-        mongoUri = mongoUri + '/atlas-sky-ball';
+    // 修正连接字符串以确保连接到正确的数据库
+    if (mongoUri.includes('/test') || mongoUri.includes('test?')) {
+      // 如果URI包含/test或test?，替换为正确的数据库
+      mongoUri = mongoUri.replace('/test', '/atlas-sky-ball').replace('test?', 'atlas-sky-ball?');
+    } else if (!mongoUri.includes('/atlas-sky-ball')) {
+      // 如果URI中没有指定atlas-sky-ball，但在路径中有其他数据库名，则替换
+      const match = mongoUri.match(/mongodb\+srv:\/\/[^\/]+\/([^?#]+)/);
+      if (match && match[1] && !match[1].includes('atlas-sky-ball')) {
+        // 替换最后一个路径部分
+        mongoUri = mongoUri.replace(new RegExp('/' + match[1] + '(\?|$)'), '/atlas-sky-ball$1');
+      } else if (!mongoUri.includes('?')) {
+        // 如果没有查询参数也没有指定数据库，则添加数据库名
+        if (mongoUri.endsWith('/')) {
+          mongoUri = mongoUri + 'atlas-sky-ball';
+        } else {
+          mongoUri = mongoUri + '/atlas-sky-ball';
+        }
       }
-    } else {
-      // 如果URI包含/test，替换为正确的数据库
-      mongoUri = mongoUri.replace('/test', '/atlas-sky-ball').replace('/test?', '/atlas-sky-ball?');
     }
     
     console.log('🔗 修正后的连接串:', mongoUri.slice(0, 50) + '***'); // 隐藏密码，仅看前50位
