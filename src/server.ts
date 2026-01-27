@@ -1,8 +1,7 @@
 import express, { Request, Response, NextFunction, Express } from 'express';
 import cors from 'cors';
-import mongoose from 'mongoose'; // 保留mongoose导入，某些地方可能仍在使用
+import mongoose, { Connection } from 'mongoose';
 import connectDB from './config/vercel-mongoose';
-import { MongoClient } from 'mongodb';
 // 导入路由
 import authRoutes from './routes/auth';
 
@@ -25,13 +24,13 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // ########## 2. 数据库初始化（Vercel Serverless按需执行，仅初始化一次）##########
-let dbConnectionPromise: Promise<MongoClient> | null = null;
-let dbConnection: MongoClient | null = null;
+let dbConnectionPromise: Promise<Connection> | null = null;
+let dbConnection: Connection | null = null;
 
 /**
  * 初始化数据库连接（强化单例机制，防止重复连接）
  */
-const initializeDatabase = async (): Promise<MongoClient> => {
+const initializeDatabase = async (): Promise<Connection> => {
   // 如果已有连接实例，直接返回
   if (dbConnection) {
     console.log('🔄 复用已存在的数据库连接');
@@ -72,12 +71,12 @@ app.get('/health', async (req: Request, res: Response) => {
     // 等待数据库连接完成，设置5秒超时
     if (dbConnectionPromise) {
       try {
-        const client = await Promise.race([
+        await Promise.race([
           dbConnectionPromise,
           new Promise((_, reject) => setTimeout(() => reject(new Error('数据库连接超时')), 5000))
         ]);
-        // 检查MongoClient连接状态
-        dbReadyState = 1; // 简化健康检查逻辑，连接成功即认为状态良好
+        // 检查Mongoose连接状态
+        dbReadyState = mongoose.connection.readyState;
         dbStatus = dbReadyState === 1 ? 'connected' : 'disconnected';
       } catch (error) {
         dbStatus = 'disconnected';
@@ -86,8 +85,8 @@ app.get('/health', async (req: Request, res: Response) => {
     } else {
       // 如果没有连接Promise，尝试创建连接
       try {
-        const client = await connectDB();
-        dbReadyState = 1; // 简化健康检查逻辑，连接成功即认为状态良好
+        await connectDB();
+        dbReadyState = mongoose.connection.readyState;
         dbStatus = dbReadyState === 1 ? 'connected' : 'disconnected';
       } catch (error) {
         dbStatus = 'disconnected';

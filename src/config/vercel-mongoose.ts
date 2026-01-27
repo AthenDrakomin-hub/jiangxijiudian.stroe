@@ -1,55 +1,71 @@
-import { MongoClient, MongoClientOptions } from 'mongodb';
-import { attachDatabasePool } from '@vercel/functions';
+import mongoose, { ConnectOptions, Connection } from 'mongoose';
 
-// 全局MongoClient实例，确保在Vercel Functions间共享
-let cachedClient: MongoClient | null = null;
-
-/**
- * 适配Vercel Serverless的MongoDB连接方法
- * 使用Vercel原生MongoDB集成和连接池管理
- */
-const connectDB = async (): Promise<MongoClient> => {
+const connectDB = async (): Promise<Connection> => {
   try {
-    console.log('🔄 初始化Vercel原生MongoDB连接...');
+    // ========== 新增1：禁用Mongoose操作缓冲（核心解决超时） ==========
+    mongoose.set('bufferCommands', false); // 禁用所有模型的操作缓冲
+    // mongoose.set('bufferMaxEntries', 0);   // 该选项在新版本中已废弃
+    console.log('📌 已禁用Mongoose操作缓冲，避免Serverless冷启动超时');
+    // ==================================================================
+
+    console.log('🔄 初始化数据库连接...');
     console.log('🔧 环境:', process.env.NODE_ENV || 'development');
     console.log('☁️ Vercel环境:', !!process.env.VERCEL);
     console.log('📡 MongoDB URI配置:', !!process.env.MONGODB_URI);
 
-    // 复用已存在的连接
-    if (cachedClient) {
-      console.log('🔄 复用已存在的数据库连接');
-      return cachedClient;
+    // 保留你已设置的【实际目标库名】拼接逻辑（无需修改）
+    const TARGET_DB_NAME = process.env.DB_NAME || 'JIANGXIJIUDIAN'; // 使用动态获取的数据库名
+    let mongoUri = process.env.MONGODB_URI!;
+    if (!mongoUri.includes(`/${TARGET_DB_NAME}?`)) {
+      mongoUri = mongoUri.replace('/?', `/${TARGET_DB_NAME}?`) || `${mongoUri}/${TARGET_DB_NAME}`;
     }
+
+    // ========== 修改2：优化连接池配置（消除池释放警告） ==========
+    const options: ConnectOptions = {
+      maxPoolSize: 1,        
+      minPoolSize: 1, // 与maxPoolSize一致，避免池频繁释放/重建
+      maxIdleTimeMS: 30000, // 延长空闲超时，适配Serverless请求间隔
+      serverSelectionTimeoutMS: 15000,
+      connectTimeoutMS: 15000,
+      socketTimeoutMS: 60000,
+      family: 4,             
+      retryWrites: true,
+      writeConcern: { w: 'majority' }
+    };
+    // ==================================================================
 
     if (!process.env.MONGODB_URI) {
-      throw new Error('❌ MONGODB_URI环境变量未设置（请确认Vercel已关联MongoDB：Storage→MongoDB）');
+      throw new Error('❌ MONGODB_URI环境变量未设置（请确认Vercel已关联MongoDB）');
     }
 
-    // Vercel推荐的MongoDB配置
-    const options: MongoClientOptions = {
-      appName: "jx-server-ts",
-      maxIdleTimeMS: 10000,  // 连接空闲超时
-      serverSelectionTimeoutMS: 15000, // 服务发现超时
-      connectTimeoutMS: 15000,        // 连接建立超时
-      socketTimeoutMS: 60000,         // 套接字超时
-    };
+    console.log('🔗 开始连接Vercel原生MongoDB集群...');
+    const connection = await mongoose.connect(mongoUri, options);
 
-    console.log('🔗 创建新的MongoDB客户端连接...');
-    const client = new MongoClient(process.env.MONGODB_URI, options);
-    
-    // 附加数据库连接池管理（Vercel Functions最佳实践）
-    attachDatabasePool(client);
-    
-    // 连接到数据库
-    await client.connect();
-    
-    // 缓存连接实例
-    cachedClient = client;
-    
+    // ========== 新增3：显式校验连接最终就绪状态（双重保障） ==========
+    if (connection.connection.readyState !== 1) {
+      throw new Error('❌ 数据库连接日志显示成功，但实际就绪状态异常，readyState=' + connection.connection.readyState);
+    }
+    // ==================================================================
+
     console.log('✅ 数据库连接成功!');
-    console.log('📊 连接详情: 数据库连接已建立');
+    console.log('📊 连接详情:', {
+      host: connection.connection.host,
+      database: connection.connection.name, // 显示你的实际目标库名
+      readyState: connection.connection.readyState // 1=完全就绪
+    });
 
-    return client;
+    // 保留原有连接事件监听（无需修改）
+    connection.connection.on('error', (error) => {
+      console.error('💥 数据库连接运行时错误:', error.message, error.stack);
+    });
+    connection.connection.on('disconnected', () => {
+      console.warn('⚠️ 数据库连接已断开');
+    });
+    connection.connection.on('reconnected', () => {
+      console.log('🔄 数据库重新连接成功');
+    });
+
+    return connection.connection;
 
   } catch (error: any) {
     console.error('💥 数据库初始化失败!');
@@ -59,9 +75,8 @@ const connectDB = async (): Promise<MongoClient> => {
       stack: error.stack
     });
 
-    // Vercel生产环境连接失败直接终止
     if (process.env.VERCEL) {
-      console.error('☁️ Vercel MongoDB连接失败，请检查Storage→MongoDB配置');
+      console.error('☁️ 请确认Vercel MongoDB资源已激活（Storage→MongoDB→状态为Connected）');
       process.exit(1);
     }
 
@@ -69,27 +84,5 @@ const connectDB = async (): Promise<MongoClient> => {
   }
 };
 
-// 导出模块作用域的MongoClient以确保跨函数共享
+// 导出连接实例
 export default connectDB;
-
-// 为了兼容现有代码，提供获取数据库实例的方法
-export const getDatabase = async () => {
-  const client = await connectDB();
-  // 从MONGODB_URI中提取数据库名称，或使用默认值
-  const dbName = process.env.DB_NAME || extractDbNameFromUri(process.env.MONGODB_URI) || 'defaultdb';
-  return client.db(dbName); // 使用动态数据库名
-};
-
-// 从MongoDB连接字符串中提取数据库名的辅助函数
-const extractDbNameFromUri = (uri: string | undefined): string | null => {
-  if (!uri) return null;
-  try {
-    const url = new URL(uri);
-    // 从路径中提取数据库名 (mongodb+srv://.../database_name?...)
-    const dbName = url.pathname.split('/')[1];
-    return dbName || null;
-  } catch (error) {
-    console.warn('⚠️ 无法从MONGODB_URI中解析数据库名称:', error);
-    return null;
-  }
-};
