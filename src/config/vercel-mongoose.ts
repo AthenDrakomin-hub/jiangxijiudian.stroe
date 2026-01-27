@@ -11,9 +11,22 @@ const connectDB = async (): Promise<Connection> => {
     console.log('☁️ Vercel环境:', !!process.env.VERCEL);
     console.log('📡 MongoDB URI配置:', !!process.env.MONGODB_URI);
 
-    // 使用Vercel原生集成提供的环境变量
-    const mongoUri = process.env.MONGODB_URI!;
-    console.log('🔗 原生集成连接串:', mongoUri.slice(0, 50) + '***'); // 隐藏密码，仅看前50位
+    // 使用Vercel原生集成提供的环境变量，并确保连接到正确的数据库
+    let mongoUri = process.env.MONGODB_URI!;
+    
+    // 检查连接字符串是否指定了数据库，如果没有，则追加正确的数据库名称
+    if (!mongoUri.includes('/atlas-sky-ball') && !mongoUri.includes('?') && !mongoUri.includes('&db=')) {
+      if (mongoUri.endsWith('/')) {
+        mongoUri = mongoUri + 'atlas-sky-ball';
+      } else {
+        mongoUri = mongoUri + '/atlas-sky-ball';
+      }
+    } else {
+      // 如果URI包含/test，替换为正确的数据库
+      mongoUri = mongoUri.replace('/test', '/atlas-sky-ball').replace('/test?', '/atlas-sky-ball?');
+    }
+    
+    console.log('🔗 修正后的连接串:', mongoUri.slice(0, 50) + '***'); // 隐藏密码，仅看前50位
 
     // ========== 核心强制适配配置（解决网络/解析/超时问题） ==========
     const options: ConnectOptions = {
