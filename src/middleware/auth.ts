@@ -3,7 +3,13 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User';
 
 // JWT 密钥 - 从环境变量中获取
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  console.error('CRITICAL ERROR: JWT_SECRET is not configured in environment variables');
+  console.error('Please set JWT_SECRET in your environment variables.');
+  process.exit(1); // 在服务器启动时检测到关键错误就退出
+}
 
 // 定义扩展的请求接口，添加 user 属性
 interface AuthenticatedRequest extends Request {

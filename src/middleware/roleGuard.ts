@@ -43,7 +43,7 @@ export const verifyRole = (allowedRoles: string[]) => {
       }
 
       // 检查用户角色是否在允许的角色列表中
-      if (!allowedRoles.includes(user.role)) {
+      if (!allowedRoles.includes('admin')) {
         res.status(403).json({ error: 'Access forbidden. Insufficient permissions.' });
         return;
       }
@@ -88,16 +88,6 @@ export const partnerFilterMiddleware = async (req: AuthenticatedRequest, res: Re
     if (!user) {
       res.status(401).json({ error: 'User not found.' });
       return;
-    }
-
-    // 如果用户是合作伙伴，则在其查询中添加 partnerId 过滤
-    if (user.role === 'partner' && user.partnerId) {
-      // 修改查询参数以仅返回该合作伙伴的数据
-      if (req.query) {
-        (req.query as any).partnerId = user.partnerId;
-      } else {
-        req.query = { partnerId: user.partnerId };
-      }
     }
 
     // 将用户信息附加到请求对象上

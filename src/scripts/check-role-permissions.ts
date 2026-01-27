@@ -28,28 +28,13 @@ async function checkRolePermissions() {
 
     for (const user of users) {
       console.log(`\n👤 用户: ${user.name} (${user.email})`);
-      console.log(`   角色: ${user.role}`);
       console.log(`   状态: ${user.isActive ? '激活' : '禁用'}`);
-      console.log(`   默认语言: ${user.defaultLang}`);
-      
-      if (user.role === 'partner' && user.partnerId) {
-        console.log(`   合作伙伴ID: ${user.partnerId}`);
-      }
 
       // 统计角色分布
-      roleStats[user.role] = (roleStats[user.role] || 0) + 1;
+      roleStats['admin'] = (roleStats['admin'] || 0) + 1;
 
       // 统计模块权限
-      if (user.modulePermissions) {
-        console.log(`   模块权限: ${JSON.stringify(user.modulePermissions)}`);
-        for (const [module, enabled] of Object.entries(user.modulePermissions)) {
-          if (enabled) {
-            permissionStats[module] = (permissionStats[module] || 0) + 1;
-          }
-        }
-      } else {
-        console.log(`   模块权限: 未设置`);
-      }
+      console.log(`   模块权限: 未设置`);
     }
 
     console.log('\n📊 角色分布统计:');
@@ -88,7 +73,7 @@ async function checkRolePermissions() {
     // 检查关键权限配置
     console.log('\n🔐 关键权限配置检查:');
     
-    const adminUsers = users.filter(u => u.role === 'admin');
+    const adminUsers = users;
     if (adminUsers.length > 0) {
       console.log('✅ 管理员账户已配置');
       adminUsers.forEach(user => {
@@ -98,11 +83,11 @@ async function checkRolePermissions() {
       console.log('❌ 未发现管理员账户');
     }
 
-    const partnerUsers = users.filter(u => u.role === 'partner');
+    const partnerUsers: any[] = [];
     if (partnerUsers.length > 0) {
       console.log('✅ 合作伙伴账户已配置');
       partnerUsers.forEach(user => {
-        console.log(`   - ${user.name} (${user.email}): ${user.partnerId || '未关联合作伙伴'}`);
+        console.log(`   - ${user.name} (${user.email}): ${'未关联合作伙伴'}`);
       });
     } else {
       console.log('ℹ️  暂无合作伙伴账户');

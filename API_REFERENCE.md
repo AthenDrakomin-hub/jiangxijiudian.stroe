@@ -16,15 +16,12 @@
 **响应**：
 ```json
 {
-  "message": "Login successful",
-  "token": "jwt_token_here",
+  "success": true,
+  "message": "登录成功",
   "user": {
     "id": "user_id",
     "name": "User Name",
-    "email": "user@example.com",
-    "role": "admin",
-    "defaultLang": "zh",
-    "modulePermissions": {}
+    "email": "user@example.com"
   }
 }
 ```
@@ -63,14 +60,18 @@
 [
   {
     "_id": "dish_id",
-    "name": {
-      "zh": "宫保鸡丁",
-      "en": "Kung Pao Chicken"
-    },
+    "name": "宫保鸡丁",
+    "nameEn": "Kung Pao Chicken",
     "description": "经典川菜",
     "price": 38,
     "category": "川菜",
+    "categoryId": "category_id",
     "isAvailable": true,
+    "isRecommended": false,
+    "tags": [],
+    "stock": 999,
+    "partnerId": "partner_id",
+    "image": "https://example.com/image.jpg",
     "imageUrl": "https://example.com/image.jpg",
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z"
@@ -116,14 +117,14 @@
 ```json
 {
   "status": "ok",
+  "service": "jx-server-ts",
   "db": {
     "status": "connected",
-    "error": null,
-    "readyState": 1
+    "readyState": 1,
+    "message": "数据库连接正常"
   },
-  "s3": false,
-  "uptime": 123.456,
-  "timestamp": "2024-01-01T00:00:00.000Z"
+  "timestamp": "2024-01-01T00:00:00.000Z",
+  "uptime": 123.456
 }
 ```
 
@@ -144,5 +145,5 @@
 ## 权限说明
 
 - **公开接口**：需要有效的 JWT token
-- **管理接口**：需要 admin 角色
-- **员工接口**：需要 admin 或 staff 角色
+- **管理接口**：需要认证用户（当前实现中未区分具体角色权限）
+- **员工接口**：需要认证用户（当前实现中未区分具体角色权限）

@@ -1,250 +1,131 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction, Express } from 'express';
 import cors from 'cors';
-import path from 'path';
+import mongoose, { Connection } from 'mongoose';
 import connectDB from './config/vercel-mongoose';
-import { isS3Configured } from './config/s3';
+// 导入路由
+import authRoutes from './routes/auth';
 
-import mongoose from 'mongoose';
-import { WebSocketServer, WebSocket } from 'ws';
-import http from 'http';
-import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+// 创建Express应用实例
+const app: Express = express();
+// Vercel自动分配端口，本地默认3000
+const PORT: number = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 
-const app = express();
+// ########## 1. 中间件配置（顺序不可乱，跨域已适配你的前端域名）##########
+// CORS配置：固定你的前端域名，避免跨域问题，保留凭证支持
+app.use(cors({
+  origin: 'https://www.jiangxijiudian.store', // 你的前端实际域名，不可修改
+  credentials: true, // 允许跨域携带Cookie/Token
+  methods: ['GET', 'POST', 'OPTIONS'], // 允许的请求方法
+  allowedHeaders: ['Content-Type', 'Authorization'] // 允许的请求头
+}));
+// 解析JSON请求体（前端已正确设置Content-Type: application/json）
+app.use(express.json({ limit: '10kb' }));
+// 解析表单URL编码请求体（备用，适配后续扩展）
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-// 创建HTTP服务器
-const server = http.createServer(app);
+// ########## 2. 数据库初始化（Vercel Serverless按需执行，仅初始化一次）##########
+let dbConnectionPromise: Promise<Connection> | null = null;
 
-// 配置CORS - 针对 Vercel 环境优化
-// 注意：由于 Vercel 层面已经设置了 CORS 头部，这里只需处理非 CORS 相关的功能
-const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'https://www.jxfdfsfresh.vip',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Set-Cookie'],
-  // 只预处理，不实际设置头部（由 Vercel 处理）
-  preflightContinue: true
-};
-
-// 使用 cors 中间件（主要用于验证和预处理）
-app.use(cors(corsOptions));
-
-// 专门处理OPTIONS预检请求
-app.options('*', cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// 连接数据库并等待连接完成
-let dbConnectionPromise: Promise<mongoose.Connection>;
-
-const initializeDatabase = async () => {
-  try {
-    console.log('🔄 Initializing database connection...');
-    console.log('🔧 Environment:', process.env.NODE_ENV || 'development');
-    console.log('☁️ Vercel Environment:', !!process.env.VERCEL);
-    console.log('📡 MongoDB URI configured:', !!process.env.MONGODB_URI);
-    
+/**
+ * 初始化数据库连接（防止重复连接）
+ */
+const initializeDatabase = async (): Promise<Connection> => {
+  if (!dbConnectionPromise) {
+    console.log('🔄 首次初始化数据库连接...');
     dbConnectionPromise = connectDB();
-    
-    console.log('⏳ Waiting for database connection to complete...');
-    const connection = await dbConnectionPromise;
-    
-    console.log('✅ Database connection established successfully!');
-    console.log('📊 Connection details:', {
-      host: connection.host,
-      name: connection.name,
-      port: connection.port,
-      readyState: connection.readyState
-    });
-    
-  } catch (error: any) {
-    console.error('💥 DATABASE INITIALIZATION FAILED!');
-    console.error('📋 Error Details:', {
-      message: error.message,
-      name: error.name,
-      stack: error.stack
-    });
-    
-    // 在Vercel Serverless环境中，数据库连接失败应该提供详细日志
-    if (process.env.VERCEL) {
-      console.error('☁️ Vercel environment detected: Ensure MONGODB_URI is set in Vercel Environment Variables');
-    }
-    
-    // 在生产环境中，数据库连接失败应该终止应用
-    if (process.env.NODE_ENV === 'production') {
-      console.error('🚨 Production environment: Shutting down due to database failure');
-      process.exit(1);
-    }
-    
-    // 在开发环境中，继续启动但标记数据库不可用
-    console.warn('⚠️ Continuing startup with database unavailable...');
-    throw error;
   }
+  return dbConnectionPromise;
 };
 
-// 立即开始数据库连接
-console.log('🚀 Starting database initialization process...');
-initializeDatabase().catch(error => {
-  console.error('💥 Critical: Database initialization failed completely!');
-  console.error('📋 Error:', error);
-  
-  // 在Vercel等Serverless环境中，数据库连接失败通常意味着应用无法正常工作
-  if (process.env.VERCEL) {
-    console.error('☁️ Vercel environment: Database connection is critical for this application');
-  }
-  
-  // 不要让应用在数据库连接失败的情况下继续运行
-  if (process.env.NODE_ENV === 'production') {
-    console.error('🚨 Production: Exiting due to critical database failure');
-    process.exit(1);
-  }
+// 立即执行数据库初始化，捕获初始化错误
+initializeDatabase().catch((error: any) => {
+  console.error('💥 数据库初始化关键错误:', error.message);
+  // Vercel生产环境数据库初始化失败，直接终止服务
+  if (process.env.VERCEL) process.exit(1);
 });
 
-// 确保在应用关闭时优雅地断开数据库连接
-process.on('SIGINT', async () => {
-  console.log('\nReceived SIGINT. Closing MongoDB connection...');
-  if (mongoose.connection.readyState === 1) {
-    await mongoose.connection.close();
-  }
-  process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-  console.log('Received SIGTERM. Closing MongoDB connection...');
-  if (mongoose.connection.readyState === 1) {
-    await mongoose.connection.close();
-  }
-  process.exit(0);
-});
-
-// 健康检查路由
-app.get('/health', async (_req: Request, res: Response) => {
+// ########## 3. 路由挂载 ##########
+// 健康检查路由：快速验证服务状态+数据库连接（优先测试此接口）
+app.get('/health', async (req: Request, res: Response) => {
   try {
-    // 检查数据库连接状态
-    let dbStatus = 'unknown';
-    let dbError = null;
-    
-    try {
-      if (dbConnectionPromise) {
-        // 等待数据库连接完成
-        await Promise.race([
-          dbConnectionPromise,
-          new Promise((_, reject) => setTimeout(() => reject(new Error('DB connection timeout')), 5000))
-        ]);
-        dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-      } else {
-        dbStatus = 'not_initialized';
-      }
-    } catch (error: any) {
-      dbStatus = 'error';
-      dbError = error.message || 'Unknown error';
+    let dbStatus: string = 'unknown';
+    let dbReadyState: number = mongoose.connection.readyState;
+
+    // 等待数据库连接完成，设置5秒超时
+    if (dbConnectionPromise) {
+      await Promise.race([
+        dbConnectionPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('数据库连接超时')), 5000))
+      ]);
+      dbReadyState = mongoose.connection.readyState;
+      dbStatus = dbReadyState === 1 ? 'connected' : 'disconnected';
     }
-    
-    res.json({
+
+    // 健康检查成功响应
+    res.status(200).json({
       status: 'ok',
+      service: 'jx-server-ts',
       db: {
         status: dbStatus,
-        error: dbError,
-        readyState: mongoose.connection.readyState,
+        readyState: dbReadyState, // 1=连接成功，0=未连接，2=正在连接，3=断开连接
+        message: dbReadyState === 1 ? '数据库连接正常' : '数据库连接异常'
       },
-      s3: isS3Configured(),
-      uptime: process.uptime(),
       timestamp: new Date().toISOString(),
+      uptime: process.uptime()
     });
   } catch (error: any) {
+    // 健康检查失败响应
     res.status(500).json({
       status: 'error',
-      message: error.message || 'Unknown error',
+      service: 'jx-server-ts',
+      db: {
+        status: 'error',
+        message: error.message
+      },
       timestamp: new Date().toISOString()
     });
   }
 });
 
-// 添加 favicon 处理
-app.get('/favicon.ico', (req: Request, res: Response) => {
-  res.status(204).end();
-});
+// 认证路由：挂载登录接口（路径：/api/auth/login）
+app.use('/api/auth', authRoutes);
 
-// 添加根路由
+// 根路由：验证服务是否正常启动
 app.get('/', (req: Request, res: Response) => {
-  res.json({ message: 'Restaurant Ordering API - Closed Loop MVP' });
-});
-
-// 挂载API路由
-import apiRoutes from './routes/api';
-import adminRoutes from './routes/admin';
-import stubRoutes from './routes/stub';
-import printRoutes from './routes/print';
-import authRoutes from './routes/auth';
-import customerRoutes from './routes/customer';
-app.use('/api', apiRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/data', stubRoutes); // 为新模型提供基础路由
-app.use('/api/print', printRoutes); // 打印服务路由
-app.use('/api/auth', authRoutes); // 认证服务路由
-app.use('/api/customer', customerRoutes); // 客户点餐服务路由
-
-// 添加 favicon 处理（在所有 API 路由之后，但在错误处理之前）
-app.get('/favicon.ico', (req: Request, res: Response) => {
-  res.status(204).end();
-});
-app.get('/favicon.png', (req: Request, res: Response) => {
-  res.status(204).end();
-});
-
-// 设置端口，优先使用环境变量，否则使用默认端口
-const PORT = process.env.PORT ? parseInt(process.env.PORT) : 4000;
-
-// 创建WebSocket服务器
-const wss = new WebSocketServer({ server, path: '/ws' }); // Add path for clarity
-
-// 存储所有活跃的WebSocket连接
-const clients = new Set<WebSocket>();
-
-wss.on('connection', (ws: WebSocket) => {
-  console.log('New client connected to WebSocket');
-  clients.add(ws);
-
-  // Send welcome message to the new client
-  ws.send(JSON.stringify({ type: 'CONNECTION_ESTABLISHED', message: 'Connected to KDS server' }));
-
-  ws.on('close', () => {
-    console.log('Client disconnected from WebSocket');
-    clients.delete(ws);
-  });
-
-  ws.on('error', (error) => {
-    console.error('WebSocket error:', error);
-    clients.delete(ws);
+  res.status(200).json({
+    message: '江西酒店API - 纯TS版（Vercel MongoDB原生适配）',
+    status: 'running',
+    docs: '/health'
   });
 });
 
-// 广播消息给所有连接的客户端
-const broadcastToClients = (data: any) => {
-  const message = JSON.stringify(data);
-  clients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(message);
-    }
+// ########## 4. 错误处理中间件 ##########
+// 404错误：处理无效接口路径
+app.use('*', (req: Request, res: Response) => {
+  res.status(404).json({
+    success: false,
+    error: '接口不存在',
+    path: req.originalUrl
   });
-};
+});
 
-// 导出广播函数以便在其他地方使用
-export { broadcastToClients };
+// 全局异常处理：捕获所有未处理的错误
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('💥 全局未处理异常:', err.message, err.stack);
+  res.status(500).json({
+    success: false,
+    error: '服务器内部错误'
+  });
+});
 
-// 只有在非 Vercel 环境下才运行 listen
-if (!process.env.VERCEL_ENV) {
-  const port = process.env.PORT || 4000;
-  server.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+// ########## 5. 服务启动（Vercel环境自动处理，本地开发手动启动）##########
+// 非Vercel环境（本地开发）才启动listen，Vercel会自动识别并托管app
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 纯TS服务本地启动成功 → http://localhost:${PORT}`);
+    console.log(`🔍 健康检查地址 → http://localhost:${PORT}/health`);
   });
 }
 
-// 404 处理中间件
-app.use(notFoundHandler);
-
-// 错误处理中间件
-app.use(errorHandler);
-
-// 必须导出 app 供 Vercel 调用
+// 必须导出app实例，供Vercel Serverless函数识别
 export default app;

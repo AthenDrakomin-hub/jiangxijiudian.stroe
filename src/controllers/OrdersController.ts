@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import Order from '../models/Order';
 import Dish from '../models/Dish';
-import { broadcastToClients } from '../server';
 
 
 
@@ -58,20 +57,6 @@ class OrdersController {
 
       const savedOrder = await order.save();
       
-      // 广播新订单创建
-      broadcastToClients({
-        type: 'NEW_ORDER',
-        payload: {
-          orderId: savedOrder._id,
-          status: savedOrder.status,
-          roomNumber: savedOrder.roomNumber,
-          tableId: savedOrder.tableId,
-          items: savedOrder.items,
-          totalAmount: savedOrder.totalAmount,
-          createdAt: savedOrder.createdAt
-        }
-      });
-      
       res.status(201).json(savedOrder);
     } catch (error) {
       console.error('Error creating order:', error);
@@ -103,19 +88,6 @@ class OrdersController {
         res.status(404).json({ error: 'Order not found' });
         return;
       }
-
-      // 广播订单状态更新
-      broadcastToClients({
-        type: 'ORDER_STATUS_UPDATE',
-        payload: {
-          orderId: order._id,
-          status: order.status,
-          roomNumber: order.roomNumber,
-          tableId: order.tableId,
-          items: order.items,
-          totalAmount: order.totalAmount
-        }
-      });
 
       res.json(order);
     } catch (error) {

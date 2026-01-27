@@ -21,35 +21,83 @@
 ```
 ├── src/                           # 后端源代码
 │   ├── config/                    # 配置文件
-│   │   └── db.ts                  # MongoDB 连接配置
+│   │   ├── db.ts                  # MongoDB 连接配置
+│   │   ├── s3.ts                  # S3存储配置
+│   │   ├── vercel-db.ts           # Vercel数据库配置
+│   │   └── vercel-mongoose.ts     # Vercel Mongoose连接配置
 │   ├── controllers/               # 控制器层
+│   │   ├── AuthController.ts      # 认证控制器
 │   │   ├── CategoriesController.ts # 分类管理
+│   │   ├── CustomerController.ts  # 客户端控制器
 │   │   ├── DishesController.ts    # 菜品管理
+│   │   ├── ExpenseController.ts   # 支出管理
+│   │   ├── FinanceController.ts   # 财务管理
+│   │   ├── IngredientsController.ts # 原料管理
+│   │   ├── InventoryController.ts # 库存管理
 │   │   ├── OrdersController.ts    # 订单管理
+│   │   ├── PartnerController.ts   # 供应商管理
+│   │   ├── PaymentController.ts   # 支付管理
+│   │   ├── PrintController.ts     # 打印管理
+│   │   ├── QRManagementController.ts # 二维码管理
+│   │   ├── RegistrationController.ts # 注册管理
 │   │   ├── RoomsController.ts     # 房间管理
+│   │   ├── StaffController.ts     # 员工管理
+│   │   ├── SupplyChainController.ts # 供应链管理
 │   │   ├── SystemConfigController.ts # 系统配置
 │   │   └── UserController.ts      # 用户管理
 │   ├── middleware/                # 中间件
+│   │   ├── auth.ts                # 认证中间件
+│   │   ├── errorHandler.ts        # 错误处理中间件
 │   │   └── roleGuard.ts           # 角色权限中间件
 │   ├── models/                    # 数据模型
 │   │   ├── Category.ts            # 分类模型
 │   │   ├── Dish.ts                # 菜品模型
+│   │   ├── Expense.ts             # 支出模型
+│   │   ├── Ingredient.ts          # 原料模型
+│   │   ├── Inventory.ts           # 库存模型
+│   │   ├── Menu.ts                # 菜单模型
+│   │   ├── Notification.ts        # 通知模型
 │   │   ├── Order.ts               # 订单模型
+│   │   ├── Partner.ts             # 供应商模型
+│   │   ├── Payment.ts             # 支付模型
+│   │   ├── Product.ts             # 产品模型
 │   │   ├── Room.ts                # 房间模型
+│   │   ├── Staff.ts               # 员工模型
 │   │   ├── SystemConfig.ts        # 系统配置模型
 │   │   └── User.ts                # 用户模型
 │   ├── routes/                    # API 路由
 │   │   ├── admin.ts               # 管理员路由
 │   │   ├── api.ts                 # 公共 API 路由
+│   │   ├── auth.ts                # 认证路由
+│   │   ├── customer.ts            # 客户路由
+│   │   ├── print.ts               # 打印路由
 │   │   └── stub.ts                # 其他路由
 │   ├── scripts/                   # 脚本文件
+│   │   ├── backup-db.ts           # 数据库备份
+│   │   ├── check-customer-ordering.ts # 客户点餐检查
+│   │   ├── check-db-structure.ts  # 数据库结构检查
+│   │   ├── check-role-permissions.ts # 角色权限检查
+│   │   ├── check-system-config.ts # 系统配置检查
+│   │   ├── init-missing-collections.ts # 初始化缺失集合
+│   │   ├── migrate-db.ts          # 数据库迁移
+│   │   ├── seed-menu-data-simple.ts # 简单菜单数据种子
+│   │   ├── seed-menu-data.ts      # 菜单数据种子
 │   │   └── seed.ts                # 数据初始化脚本
 │   ├── services/                  # 业务逻辑服务
+│   │   └── DatabaseService.ts     # 数据库服务
 │   ├── types/                     # 类型定义
+│   │   └── index.ts               # 通用类型定义
 │   ├── utils/                     # 工具函数
-│   └── server.ts                  # 主服务器入口
+│   │   ├── qrGenerator.ts         # 二维码生成
+│   │   └── seedData.ts            # 种子数据
+│   ├── server.ts                  # 主服务器入口
+│   └── test-db-connection.ts      # 数据库连接测试
 ├── .env.example                   # 环境变量示例
 ├── .gitignore                     # Git 忽略配置
+├── AGENTS.md                      # 智能体指导文档
+├── API_REFERENCE.md               # API参考文档
+├── CUSTOMER_API.md                # 客户端API文档
+├── DEPLOYMENT.md                  # 部署指南
 ├── package.json                   # 项目依赖
 ├── tsconfig.json                  # TypeScript 配置
 ├── vercel.json                    # Vercel 部署配置
@@ -96,6 +144,7 @@
 2. **环境变量配置**
    - 复制 `.env.example` 为 `.env`
    - 配置 `MONGODB_URI` 为 MongoDB Atlas 连接字符串
+   - 配置 `JWT_SECRET` 用于用户认证
    - 如需使用 S3 存储，配置 S3 相关参数
 
 3. **部署命令**
@@ -107,21 +156,15 @@
    npm start
    ```
 
-### 前端项目连接后端API
+### API端点访问
 
-1. **获取后端API URL**
+1. **获取已部署的API URL**
    - 使用已部署的后端API URL（如 `https://your-project-name.vercel.app`）
 
-2. **前端项目配置**
-   在前端项目的环境变量中设置：
-   ```env
-   REACT_APP_API_BASE_URL=https://your-project-name.vercel.app
-   ```
-
-3. **API请求配置**
+2. **API请求配置**
    ```javascript
    // axios 或 fetch 配置
-   const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+   const API_BASE_URL = 'https://your-project-name.vercel.app';
    
    // 示例请求
    fetch(`${API_BASE_URL}/api/dishes`)
@@ -129,15 +172,16 @@
      .then(data => console.log(data));
    ```
 
-4. **可用API端点**
+3. **可用API端点**
    - `GET ${API_BASE_URL}/api/dishes` - 获取菜品列表
    - `GET ${API_BASE_URL}/api/rooms/:roomNumber` - 获取房间信息
    - `POST ${API_BASE_URL}/api/orders` - 创建订单
    - `GET ${API_BASE_URL}/api/orders` - 查询订单
    - `PATCH ${API_BASE_URL}/api/orders/:id/status` - 更新订单状态
+   - `GET ${API_BASE_URL}/api/auth/login` - 用户登录
    - `GET ${API_BASE_URL}/health` - 健康检查
 
-5. **WebSocket连接**
+4. **WebSocket连接**
    如需实时通信，使用：
    ```javascript
    const wsUrl = `wss://your-project-name.vercel.app/ws`;

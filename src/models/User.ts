@@ -1,83 +1,56 @@
-import mongoose from 'mongoose';
+import mongoose, { Schema, Document, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
-export interface IUser extends mongoose.Document {
-  name: string;        // 与前端接口一致
+// 定义用户TS接口（与MongoDB集合结构强一致，类型约束）
+export interface IUser extends Document {
   email: string;
-  password: string;
-  role: 'admin' | 'staff' | 'partner';
-  partnerId?: string;
-  phone?: string;
-  avatar?: string;
-  defaultLang: string;
-  modulePermissions: Record<string, boolean>;
-  isActive: boolean;
+  password: string; // 存储bcrypt密文，非明文
+  name: string;
+  isActive: boolean; // 用户状态，默认启用
   createdAt: Date;
   updatedAt: Date;
+  // 可选：后续扩展字段（如phone/avatar等）
 }
 
-const UserSchema = new mongoose.Schema<IUser>({
-  name: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true,
-    minlength: 3,
-    maxlength: 30,
-  },
+// Mongoose Schema（与TS接口IUser完全匹配，添加验证规则）
+const userSchema: Schema<IUser> = new Schema({
   email: {
     type: String,
-    required: true,
+    required: [true, '邮箱不能为空'],
     unique: true,
-    trim: true,
-    lowercase: true,
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, '请输入有效的邮箱地址'],
+    lowercase: true, // 统一转小写，避免查询时大小写问题
+    trim: true
   },
   password: {
     type: String,
-    required: true,
-    minlength: 6,
+    required: [true, '密码不能为空']
   },
-  role: {
+  name: {
     type: String,
-    enum: ['admin', 'staff', 'partner'],
-    required: true,
-    default: 'staff',
-  },
-  partnerId: {
-    type: String,
-    ref: 'Partner',
-    required: function() {
-      return this.role === 'partner';
-    },
-  },
-  phone: {
-    type: String,
-    trim: true,
-    match: [/^[\d\s\-\+\(\)]+$/, '请输入有效的电话号码'],
-  },
-  avatar: {
-    type: String,
-    trim: true,
-  },
-  defaultLang: {
-    type: String,
-    default: 'zh',
-  },
-  modulePermissions: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {},
+    required: [true, '姓名不能为空'],
+    trim: true
   },
   isActive: {
     type: Boolean,
-    default: true,
+    default: true, // 默认启用用户
+    required: true
   },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+    immutable: true // 不可修改
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
 }, {
-  timestamps: true,
+  timestamps: false, // 关闭自动时间戳，手动维护createdAt/updatedAt
+  collection: 'users' // 显式指定MongoDB集合名，避免Mongoose自动复数化
 });
 
 // 在保存前对密码进行哈希处理的中间件
-UserSchema.pre('save', async function(next) {
+userSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
   const saltRounds = 10;
   this.password = await bcrypt.hash(this.password, saltRounds);
@@ -85,10 +58,10 @@ UserSchema.pre('save', async function(next) {
 });
 
 // 比较密码的方法
-UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+userSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
-const User = mongoose.model<IUser>('User', UserSchema);
-
+// 生成并导出用户模型
+const User: Model<IUser> = mongoose.model<IUser>('User', userSchema);
 export default User;

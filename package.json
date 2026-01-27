@@ -15,7 +15,8 @@
     "postbuild": "echo Build completed successfully!",
     "test-db": "ts-node src/test-db-connection.ts",
     "backup-db": "ts-node src/scripts/backup-db.ts",
-    "migrate-db": "ts-node src/scripts/migrate-db.ts"
+    "migrate-db": "ts-node src/scripts/migrate-db.ts",
+    "vercel-build": "npm run build"
   },
   "keywords": [
     "nodejs",

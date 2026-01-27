@@ -1,111 +1,110 @@
 import { Request, Response } from 'express';
-import User from '../models/User';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import mongoose from 'mongoose';
+import User, { IUser } from '../models/User';
 
+/**
+ * 登录接口控制器（TS类式写法，完整类型约束）
+ */
 class AuthController {
-  // 用户登录
+  /**
+   * 处理用户登录请求
+   * @param req Express请求对象
+   * @param res Express响应对象
+   */
   public login = async (req: Request, res: Response): Promise<void> => {
     try {
+      console.log('🔐 开始处理登录请求...');
       const { email, password } = req.body;
 
-      // 验证输入
-      if (!email || !password) {
-        res.status(400).json({ error: '邮箱和密码是必填项' });
-        return;
-      }
+      // 入参日志（隐藏密码明文）
+      console.log('📋 接收到的参数:', { email, password: password ? '***' : '未提供' });
 
-      // 检查数据库连接
-      if (mongoose.connection.readyState !== 1) {
-        console.error('Database not connected. Ready state:', mongoose.connection.readyState);
-        res.status(500).json({ 
-          error: '数据库连接不可用',
-          dbState: mongoose.connection.readyState
+      // 1. 入参非空校验
+      if (!email || !password) {
+        console.warn('❌ 登录参数缺失:', { email: !!email, password: !!password });
+        res.status(400).json({
+          success: false,
+          error: '邮箱和密码不能为空'
         });
         return;
       }
 
-      // 查找用户
-      const user = await User.findOne({ email });
+      // 2. 根据邮箱查询用户（统一转小写，与模型匹配）
+      const lowerEmail = email.toLowerCase().trim();
+      console.log('🔍 正在查询用户:', lowerEmail);
+      const user: IUser | null = await User.findOne({ email: lowerEmail });
+
+      // 用户不存在校验
       if (!user) {
-        res.status(401).json({ error: '用户名或密码错误' });
+        console.warn('❌ 用户不存在:', lowerEmail);
+        res.status(401).json({
+          success: false,
+          error: '邮箱或密码错误'
+        });
         return;
       }
 
-      // 验证密码
-      const isPasswordValid = await bcrypt.compare(password, user.password);
+      console.log('👤 找到用户:', {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        isActive: user.isActive
+      });
+
+      // 3. 用户状态校验（是否启用）
+      if (!user.isActive) {
+        console.warn('❌ 用户账户已停用:', user.email);
+        res.status(401).json({
+          success: false,
+          error: '账户已被停用，请联系管理员'
+        });
+        return;
+      }
+
+      // 4. bcrypt密码校验（明文 → 数据库密文）
+      console.log('🔑 开始密码校验...');
+      const isPasswordValid: boolean = await bcrypt.compare(password, user.password);
+
       if (!isPasswordValid) {
-        res.status(401).json({ error: '用户名或密码错误' });
+        console.warn('❌ 密码校验失败:', user.email);
+        res.status(401).json({
+          success: false,
+          error: '邮箱或密码错误'
+        });
         return;
       }
 
-      // 生成JWT token
-      const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
-      const token = jwt.sign(
-        { 
-          userId: user._id, 
-          email: user.email, 
-          role: user.role 
-        },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
+      console.log('✅ 密码校验成功');
 
-      res.json({
-        message: 'Login successful',
-        token,
+      // 5. 登录成功响应（返回核心用户信息，隐藏敏感字段）
+      const responseData = {
+        success: true,
+        message: '登录成功',
         user: {
           id: user._id,
-          name: user.name,
           email: user.email,
-          role: user.role,
-          defaultLang: user.defaultLang,
-          modulePermissions: user.modulePermissions
+          name: user.name
         }
-      });
+      };
+
+      console.log('🎉 登录成功:', responseData.user);
+      res.status(200).json(responseData);
+
     } catch (error: any) {
-      console.error('登录过程中发生错误:', error);
-      res.status(500).json({ 
-        error: '登录失败',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      console.error('💥 登录接口执行异常:');
+      console.error('📋 错误详情:', {
+        message: error.message,
+        stack: error.stack
       });
-    }
-  };
 
-
-
-  // 获取当前用户信息
-  public getCurrentUser = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const token = req.headers.authorization?.split(' ')[1];
-      if (!token) {
-        res.status(401).json({ error: '访问被拒绝，未提供令牌。' });
-        return;
-      }
-
-      const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
-      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string; role: string };
-
-      const user = await User.findById(decoded.userId, { password: 0 });
-      if (!user) {
-        res.status(404).json({ error: '用户未找到' });
-        return;
-      }
-
-      res.json({
-        id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        defaultLang: user.defaultLang,
-        modulePermissions: user.modulePermissions
+      // 服务器内部错误统一响应
+      res.status(500).json({
+        success: false,
+        error: '服务器内部错误'
       });
-    } catch (error) {
-      console.error('获取当前用户信息时发生错误:', error);
-      res.status(500).json({ error: '获取用户信息失败' });
     }
   };
 }
 
+// 导出单例控制器（避免重复实例化）
 export default new AuthController();

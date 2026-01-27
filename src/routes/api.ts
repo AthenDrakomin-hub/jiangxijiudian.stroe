@@ -33,6 +33,5 @@ router.patch('/config', verifyRole(['admin']), systemConfigController.updateConf
 // 用户管理相关API路由 - 仅允许 admin
 router.get('/users', verifyRole(['admin']), userController.getAllUsers);
 router.get('/users/:id', verifyRole(['admin']), userController.getUserById);
-router.patch('/users/:id/permissions', verifyRole(['admin']), userController.updatePermissions);
 
 export default router;
