@@ -45,6 +45,12 @@ initializeDatabase().catch((error: any) => {
 });
 
 // ########## 3. 路由挂载 ##########
+// Favicon处理路由：消除浏览器自动请求favicon.ico产生的404错误
+app.get('/favicon.ico', (req: Request, res: Response) => {
+  // 返回204 No Content，表示请求成功但无内容返回
+  res.status(204).end();
+});
+
 // 健康检查路由：快速验证服务状态+数据库连接（优先测试此接口）
 app.get('/health', async (req: Request, res: Response) => {
   try {

@@ -4,6 +4,8 @@ import mongoose, { ConnectOptions, Connection } from 'mongoose';
  * 适配Vercel Serverless的MongoDB连接方法
  * 直接引用Vercel自动生成的只读MONGODB_URI，无需手动配置
  */
+let connectTimeout: NodeJS.Timeout;
+
 const connectDB = async (): Promise<Connection> => {
   try {
     console.log('🔄 初始化数据库连接...');
@@ -11,13 +13,19 @@ const connectDB = async (): Promise<Connection> => {
     console.log('☁️ Vercel环境:', !!process.env.VERCEL);
     console.log('📡 MongoDB URI配置:', !!process.env.MONGODB_URI);
 
+    // 新增：连接超时强制提示（15秒后未完成则输出日志）
+    connectTimeout = setTimeout(() => {
+      console.error('⚠️ 数据库连接超时（15秒未完成），Vercel冷启动可能存在网络延迟');
+    }, 15000);
+
     // Vercel Serverless核心适配配置（动态IP/无连接池/网络延迟适配）
     const options: ConnectOptions = {
       maxPoolSize: 1,        // 禁用连接池，适配Serverless短暂连接特性
       minPoolSize: 0,
       maxIdleTimeMS: 10000,  // 连接空闲超时，及时释放资源
-      serverSelectionTimeoutMS: 8000, // 延长超时，适配Vercel跨区域网络延迟
-      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: 15000, // 延长到15秒（适配Vercel跨区域网络延迟）
+      connectTimeoutMS: 15000,        // 延长到15秒
+      socketTimeoutMS: 60000,         // 延长到60秒
       family: 4,             // 优先IPv4，避免域名解析问题
       retryWrites: true,
       writeConcern: { w: 'majority' }
@@ -30,6 +38,9 @@ const connectDB = async (): Promise<Connection> => {
 
     console.log('🔗 开始连接Vercel原生MongoDB集群...');
     const connection = await mongoose.connect(process.env.MONGODB_URI, options);
+
+    // 连接成功后清除超时
+    clearTimeout(connectTimeout);
 
     // 连接成功日志（关键排查信息）
     console.log('✅ 数据库连接成功!');
@@ -53,6 +64,8 @@ const connectDB = async (): Promise<Connection> => {
     return connection.connection;
 
   } catch (error: any) {
+    // 连接失败时清除超时并输出日志
+    clearTimeout(connectTimeout);
     console.error('💥 数据库初始化失败!');
     console.error('📋 错误详情:', {
       message: error.message,
