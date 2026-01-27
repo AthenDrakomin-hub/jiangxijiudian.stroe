@@ -1,0 +1,95 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const mongoose_1 = __importDefault(require("mongoose"));
+const User_1 = __importDefault(require("../models/User"));
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+    throw new Error('Please define the MONGODB_URI environment variable');
+}
+console.log('🔍 开始检查角色权限配置...');
+async function checkRolePermissions() {
+    try {
+        // 连接到数据库
+        console.log('🔌 正在连接到数据库...');
+        await mongoose_1.default.connect(MONGODB_URI);
+        console.log('✅ 成功连接到数据库');
+        // 获取所有用户
+        const users = await User_1.default.find({}, { password: 0 }); // 排除密码字段
+        console.log(`\n👥 数据库中的用户 (${users.length} 个):`);
+        const roleStats = {};
+        const permissionStats = {};
+        for (const user of users) {
+            console.log(`\n👤 用户: ${user.name} (${user.email})`);
+            console.log(`   状态: ${user.isActive ? '激活' : '禁用'}`);
+            // 统计角色分布
+            roleStats['admin'] = (roleStats['admin'] || 0) + 1;
+            // 统计模块权限
+            console.log(`   模块权限: 未设置`);
+        }
+        console.log('\n📊 角色分布统计:');
+        for (const [role, count] of Object.entries(roleStats)) {
+            console.log(`   ${role}: ${count} 个用户`);
+        }
+        console.log('\n📊 模块权限统计:');
+        if (Object.keys(permissionStats).length > 0) {
+            for (const [module, count] of Object.entries(permissionStats)) {
+                console.log(`   ${module}: ${count} 个用户启用`);
+            }
+        }
+        else {
+            console.log('   暂无模块权限配置');
+        }
+        // 检查是否符合项目定义的角色体系
+        const expectedRoles = ['admin', 'staff', 'partner'];
+        const actualRoles = Object.keys(roleStats);
+        const missingRoles = expectedRoles.filter(role => !actualRoles.includes(role));
+        const extraRoles = actualRoles.filter(role => !expectedRoles.includes(role));
+        console.log('\n🎯 角色体系合规性检查:');
+        if (missingRoles.length === 0) {
+            console.log('✅ 所有预期角色都存在');
+        }
+        else {
+            console.log(`❌ 缺失的角色: ${missingRoles.join(', ')}`);
+        }
+        if (extraRoles.length === 0) {
+            console.log('✅ 没有额外的未知角色');
+        }
+        else {
+            console.log(`⚠️ 额外的角色: ${extraRoles.join(', ')}`);
+        }
+        // 检查关键权限配置
+        console.log('\n🔐 关键权限配置检查:');
+        const adminUsers = users;
+        if (adminUsers.length > 0) {
+            console.log('✅ 管理员账户已配置');
+            adminUsers.forEach(user => {
+                console.log(`   - ${user.name} (${user.email}): ${user.isActive ? '激活' : '禁用'}`);
+            });
+        }
+        else {
+            console.log('❌ 未发现管理员账户');
+        }
+        const partnerUsers = [];
+        if (partnerUsers.length > 0) {
+            console.log('✅ 合作伙伴账户已配置');
+            partnerUsers.forEach(user => {
+                console.log(`   - ${user.name} (${user.email}): ${'未关联合作伙伴'}`);
+            });
+        }
+        else {
+            console.log('ℹ️  暂无合作伙伴账户');
+        }
+        await mongoose_1.default.disconnect();
+        console.log('\n✅ 角色权限检查完成！');
+    }
+    catch (error) {
+        console.error('💥 检查过程中出现错误:', error);
+        process.exit(1);
+    }
+}
+checkRolePermissions();

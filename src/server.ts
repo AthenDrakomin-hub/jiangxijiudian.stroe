@@ -25,16 +25,27 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // ########## 2. 数据库初始化（Vercel Serverless按需执行，仅初始化一次）##########
 let dbConnectionPromise: Promise<Connection> | null = null;
+let dbConnection: Connection | null = null;
 
 /**
- * 初始化数据库连接（防止重复连接）
+ * 初始化数据库连接（强化单例机制，防止重复连接）
  */
 const initializeDatabase = async (): Promise<Connection> => {
+  // 如果已有连接实例，直接返回
+  if (dbConnection) {
+    console.log('🔄 复用已存在的数据库连接');
+    return dbConnection;
+  }
+  
+  // 如果没有连接Promise，创建新的连接
   if (!dbConnectionPromise) {
     console.log('🔄 首次初始化数据库连接...');
     dbConnectionPromise = connectDB();
   }
-  return dbConnectionPromise;
+  
+  // 等待连接完成并缓存结果
+  dbConnection = await dbConnectionPromise;
+  return dbConnection;
 };
 
 // 立即执行数据库初始化，捕获初始化错误

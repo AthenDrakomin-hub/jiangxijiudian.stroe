@@ -1,0 +1,97 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const mongoose_1 = __importDefault(require("mongoose"));
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
+// Serverless 环境下的 MongoDB 连接复用
+const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) {
+    throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+}
+const connectDB = async () => {
+    // 初始化全局对象
+    if (!global.mongoose) {
+        global.mongoose = { conn: null, promise: null };
+    }
+    if (global.mongoose.conn) {
+        console.log('✅ Reusing existing MongoDB connection');
+        return global.mongoose.conn;
+    }
+    if (global.mongoose.promise) {
+        console.log('🔄 Using existing MongoDB connection promise');
+        return global.mongoose.promise;
+    }
+    try {
+        console.log('🚀 Starting MongoDB connection...');
+        console.log('📡 Connection string:', MONGODB_URI?.substring(0, 30) + '...'); // 显示部分连接字符串用于调试
+        global.mongoose.promise = mongoose_1.default.connect(MONGODB_URI, {
+            bufferCommands: false,
+            connectTimeoutMS: 10000, // 10秒连接超时
+            socketTimeoutMS: 45000, // 45秒socket超时
+            serverSelectionTimeoutMS: 30000, // 服务器选择超时
+            heartbeatFrequencyMS: 10000, // 心跳频率
+            retryWrites: true, // 启用重试写入
+            retryReads: true, // 启用重试读取
+            maxPoolSize: 1, // 禁用连接池，适配Vercel Serverless短暂连接特性
+            minPoolSize: 0, // Serverless环境不需要最小连接池
+            ssl: true, // 显式开启TLS，匹配Atlas强制加密要求
+            tls: true
+        }).then(mongooseInstance => {
+            console.log('✅ MongoDB connection promise resolved');
+            return mongooseInstance.connection;
+        });
+        console.log('⏳ Waiting for MongoDB connection to establish...');
+        global.mongoose.conn = await global.mongoose.promise;
+        console.log(`✅ MongoDB Connected Successfully! Host: ${global.mongoose.conn.host}`);
+        console.log(`📊 Database Name: ${global.mongoose.conn.name}`);
+        console.log(`📍 Connection State: ${global.mongoose.conn.readyState}`);
+        // 监听数据库连接事件
+        global.mongoose.conn.on('connected', () => {
+            console.log('🔗 Mongoose connected to DB');
+        });
+        global.mongoose.conn.on('error', (err) => {
+            console.error('❌ Mongoose connection error:', err);
+            console.error('📝 Error Details:', {
+                name: err.name,
+                message: err.message,
+                stack: err.stack
+            });
+        });
+        global.mongoose.conn.on('disconnected', () => {
+            console.log('⚠️ Mongoose disconnected from DB');
+            if (global.mongoose) {
+                global.mongoose.conn = null;
+            }
+        });
+        return global.mongoose.conn;
+    }
+    catch (error) {
+        console.error('💥 DATABASE CONNECTION FAILED!');
+        console.error('📋 Error Message:', error.message);
+        console.error('🔧 Error Name:', error.name);
+        console.error('📄 Error Stack:', error.stack);
+        console.error('🌐 Environment:', process.env.NODE_ENV);
+        console.error('🔗 Connection URI Present:', !!MONGODB_URI);
+        // 如果是连接错误，提供更多诊断信息
+        if (error.name === 'MongoServerSelectionError') {
+            console.error('🔍 Possible causes:');
+            console.error('   1. MongoDB Atlas network whitelist not configured');
+            console.error('   2. Incorrect connection string');
+            console.error('   3. Network connectivity issues');
+            console.error('   4. MongoDB service unavailable');
+        }
+        if (global.mongoose) {
+            global.mongoose = { conn: null, promise: null };
+        }
+        // 在生产环境中，连接失败应该让进程退出
+        if (process.env.NODE_ENV === 'production') {
+            console.error('🚨 Production environment: Exiting due to database connection failure');
+            process.exit(1);
+        }
+        throw error;
+    }
+};
+exports.default = connectDB;
