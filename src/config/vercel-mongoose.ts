@@ -14,7 +14,7 @@ const connectDB = async (): Promise<Connection> => {
     console.log('📡 MongoDB URI配置:', !!process.env.MONGODB_URI);
 
     // 保留你已设置的【实际目标库名】拼接逻辑（无需修改）
-    const TARGET_DB_NAME = process.env.DB_NAME || 'JIANGXIJIUDIAN'; // 使用动态获取的数据库名
+    const TARGET_DB_NAME = process.env.DB_NAME || 'atlas-sky-ball'; // 使用动态获取的数据库名
     let mongoUri = process.env.MONGODB_URI!;
     if (!mongoUri.includes(`/${TARGET_DB_NAME}?`)) {
       mongoUri = mongoUri.replace('/?', `/${TARGET_DB_NAME}?`) || `${mongoUri}/${TARGET_DB_NAME}`;
