@@ -7,6 +7,24 @@ export interface IUser extends Document {
   password: string; // 存储bcrypt密文，非明文
   name: string;
   isActive: boolean; // 用户状态，默认启用
+  role?: string; // 用户角色：admin, staff, partner等
+  phone?: string; // 电话号码
+  defaultLang?: string; // 默认语言
+  modulePermissions?: {
+    dashboard: boolean;
+    rooms: boolean;
+    orders: boolean;
+    dishes: boolean;
+    supply_chain: boolean;
+    financial_hub: boolean;
+    images: boolean;
+    users: boolean;
+    settings: boolean;
+    categories: boolean;
+    inventory: boolean;
+    payments: boolean;
+  }; // 模块权限
+  partnerId?: string; // 合伙人ID
   createdAt: Date;
   updatedAt: Date;
   // 可选：后续扩展字段（如phone/avatar等）
@@ -43,6 +61,39 @@ const userSchema: Schema<IUser> = new Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },
+  role: {
+    type: String,
+    enum: ['admin', 'staff', 'partner'], // 定义允许的角色值
+    default: 'staff',
+    required: false
+  },
+  phone: {
+    type: String,
+    required: false
+  },
+  defaultLang: {
+    type: String,
+    default: 'zh',
+    required: false
+  },
+  modulePermissions: {
+    dashboard: { type: Boolean, default: false },
+    rooms: { type: Boolean, default: false },
+    orders: { type: Boolean, default: false },
+    dishes: { type: Boolean, default: false },
+    supply_chain: { type: Boolean, default: false },
+    financial_hub: { type: Boolean, default: false },
+    images: { type: Boolean, default: false },
+    users: { type: Boolean, default: false },
+    settings: { type: Boolean, default: false },
+    categories: { type: Boolean, default: false },
+    inventory: { type: Boolean, default: false },
+    payments: { type: Boolean, default: false },
+  },
+  partnerId: {
+    type: String,
+    required: false
   }
 }, {
   timestamps: false, // 关闭自动时间戳，手动维护createdAt/updatedAt

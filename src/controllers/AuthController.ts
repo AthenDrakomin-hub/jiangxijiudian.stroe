@@ -30,17 +30,6 @@ class AuthController {
         return;
       }
 
-      // ========== 新增：查询前校验数据库连接状态（三重保障） ==========
-      if (mongoose.connection.readyState !== 1) {
-        console.error('❌ 查询用户前检测到数据库连接未就绪，readyState=', mongoose.connection.readyState);
-        res.status(503).json({
-          success: false,
-          error: '服务器数据库未就绪，请稍后再试'
-        });
-        return;
-      }
-      // ==================================================================
-
       // 2. 根据邮箱查询用户（统一转小写，与模型匹配）
       const lowerEmail = email.toLowerCase().trim();
       console.log('🔍 正在查询用户:', lowerEmail);
