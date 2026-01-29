@@ -3,7 +3,30 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// 定义全局 mongoose 连接缓存类型（Serverless 环境下的连接复用机制）
+declare global {
+  var mongoose: {
+    conn: Connection | null;
+    promise: Promise<Connection> | null;
+  } | undefined;
+}
+
 const connectDB = async (): Promise<Connection> => {
+  // 初始化全局对象
+  if (!global.mongoose) {
+    global.mongoose = { conn: null, promise: null };
+  }
+
+  if (global.mongoose.conn) {
+    console.log('✅ Reusing existing MongoDB connection');
+    return global.mongoose.conn;
+  }
+  
+  if (global.mongoose.promise) {
+    console.log('🔄 Using existing MongoDB connection promise');
+    return global.mongoose.promise;
+  }
+
   try {
     // 保留禁用缓冲（之前已验证有效）
     mongoose.set('bufferCommands', false);
@@ -31,65 +54,80 @@ const connectDB = async (): Promise<Connection> => {
 
     // ========== 核心强制适配配置（解决网络/解析/超时问题） ==========
     const options: ConnectOptions = {
-      maxPoolSize: 1,
-      minPoolSize: 1,
-      maxIdleTimeMS: 30000,
-      // 大幅延长超时，适配所有网络延迟
-      serverSelectionTimeoutMS: 30000, // 30秒：服务器选择超时
+      bufferCommands: false,
       connectTimeoutMS: 30000,        // 30秒：连接握手超时
       socketTimeoutMS: 60000,         // 60秒：socket通信超时
+      serverSelectionTimeoutMS: 30000, // 30秒：服务器选择超时
+      heartbeatFrequencyMS: 10000,     // 心跳频率
+      retryWrites: true,              // 启用重试写入
+      retryReads: true,               // 启用重试读取
+      maxPoolSize: 1,                 // 禁用连接池，适配Vercel Serverless短暂连接特性
+      minPoolSize: 0,                 // Serverless环境不需要最小连接池
+      maxIdleTimeMS: 30000,           // 30秒空闲超时
       family: 4,                      // 强制启用IPv4（核心！避免IPv6解析问题）
-      retryWrites: true,
+      ssl: true,                      // 显式开启TLS，匹配Atlas强制加密要求
+      tls: true,
       writeConcern: { w: 'majority' }
     };
     // ==============================================================
 
-
-    if (!process.env.MONGODB_URI) {
-      throw new Error('❌ MONGODB_URI环境变量未设置（请确认Vercel已关联MongoDB）');
-    }
-
     console.log('🔍 使用Vercel原生集成连接MongoDB Atlas...');
-    const connection = await mongoose.connect(mongoUri, options);
+    
+    // 创建连接Promise，避免重复连接
+    global.mongoose.promise = mongoose.connect(mongoUri, options)
+      .then(mongooseInstance => {
+        console.log('✅ MongoDB connection promise resolved');
+        
+        // 设置连接事件监听
+        mongooseInstance.connection.on('error', (error) => {
+          console.error('💥 数据库运行时错误:', error.message);
+        });
+        
+        mongooseInstance.connection.on('disconnected', () => {
+          console.warn('⚠️ 数据库连接已断开（Serverless单次请求结束）');
+          // 在Serverless环境中，连接断开时清除缓存
+          if (global.mongoose) {
+            global.mongoose.conn = null;
+          }
+        });
+        
+        mongooseInstance.connection.on('reconnected', () => {
+          console.log('🔄 数据库重新连接成功');
+        });
+        
+        return mongooseInstance.connection;
+      });
 
-    // 双重校验就绪状态
-    if (connection.connection.readyState !== 1) {
-      throw new Error(`❌ 连接状态异常，readyState=${connection.connection.readyState}`);
-    }
-
+    // 等待连接建立
+    global.mongoose.conn = await global.mongoose.promise;
+    
     console.log('✅ 数据库连接成功!');
     console.log('📊 连接详情:', {
-      host: connection.connection.host,
-      database: connection.connection.name,
-      readyState: connection.connection.readyState,
+      host: global.mongoose.conn.host,
+      database: global.mongoose.conn.name,
+      readyState: global.mongoose.conn.readyState,
       protocol: 'IPv4',
       integration: 'Vercel Native Integration'
     });
 
-    // 保留连接事件监听
-    connection.connection.on('error', (error) => {
-      console.error('💥 数据库运行时错误:', error.message);
-    });
-    connection.connection.on('disconnected', () => {
-      console.warn('⚠️ 数据库连接已断开（Serverless单次请求结束）');
-    });
-    connection.connection.on('reconnected', () => {
-      console.log('🔄 数据库重新连接成功');
-    });
-
-    return connection.connection;
+    return global.mongoose.conn;
 
   } catch (error: any) {
     console.error('💥 数据库初始化失败!');
     console.error('📋 错误详情:', {
       message: error.message,
       name: error.name,
-      stack: error.stack.slice(0, 200) // 缩短堆栈，方便查看核心错误
+      stack: error.stack?.slice(0, 200) // 缩短堆栈，方便查看核心错误
     });
 
     if (process.env.VERCEL) {
       console.error('☁️ 已配置强制IPv4+超长超时，仍失败请检查Atlas连接串有效性');
       process.exit(1);
+    }
+    
+    // 连接失败时，清除缓存以便重试
+    if (global.mongoose) {
+      global.mongoose = { conn: null, promise: null };
     }
 
     throw error;

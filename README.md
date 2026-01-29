@@ -23,7 +23,6 @@
 │   ├── config/                    # 配置文件
 │   │   ├── db.ts                  # MongoDB 连接配置
 │   │   ├── s3.ts                  # S3存储配置
-│   │   ├── vercel-db.ts           # Vercel数据库配置
 │   │   └── vercel-mongoose.ts     # Vercel Mongoose连接配置
 │   ├── controllers/               # 控制器层
 │   │   ├── AuthController.ts      # 认证控制器
