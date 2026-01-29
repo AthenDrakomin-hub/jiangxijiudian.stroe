@@ -2,6 +2,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import connectDB from '../src/config/vercel-mongoose';
 import mongoose from 'mongoose';
+import AuthService from '../src/services/AuthService';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS
@@ -36,8 +37,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     
     // Handle authentication routes
     if (req.url?.includes('/api/auth/login') && req.method === 'POST') {
-      // Import the auth service
-      const AuthService = (await import('../src/services/AuthService')).default;
       
       // Execute login logic
       const { email, password } = req.body;

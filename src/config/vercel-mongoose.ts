@@ -109,7 +109,10 @@ const connectDB = async (): Promise<Connection> => {
       protocol: 'IPv4',
       integration: 'Vercel Native Integration'
     });
-
+    
+    // 如果需要，可以在这里切换到特定的数据库
+    // 例如：const db = global.mongoose.conn.useDb('jiangxijiudian');
+    
     return global.mongoose.conn;
 
   } catch (error: any) {
