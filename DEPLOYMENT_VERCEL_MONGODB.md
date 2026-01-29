@@ -54,13 +54,21 @@
 ```json
 {
   "version": 2,
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
+```
+
+或者，如果您想使用更明确的配置：
+
+```json
+{
+  "version": 2,
   "builds": [
     {
-      "src": "src/server.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["dist/**"]
-      }
+      "src": "api/index.ts",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
@@ -74,6 +82,8 @@
   }
 }
 ```
+
+**注意**：由于项目使用了 Vercel API Routes（位于 `api/index.ts`），Vercel 会自动检测并处理构建过程，因此简单的配置即可正常工作。
 
 ### 4.2 数据库连接优化
 
